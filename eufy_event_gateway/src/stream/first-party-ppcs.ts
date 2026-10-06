@@ -997,6 +997,7 @@ export interface ExperimentalCommandRequest {
   readonly value: number;
   readonly data: Readonly<Record<string, unknown>>;
   readonly repeat: number;
+  readonly captureMilliseconds?: number;
 }
 export class FirstPartyPpcsSession {
 
@@ -1515,7 +1516,7 @@ export class FirstPartyPpcsSession {
         this.#sendCommand(frame.command, frame.payload);
         if (index < repeat - 1) await delay(200);
       }
-      await delay(2_000);
+      await delay(request.captureMilliseconds ?? 2_000);
       return [...captured];
     } finally {
       this.#experimentalCapture = null;
