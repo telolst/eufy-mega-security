@@ -11,6 +11,7 @@
  */
 import type { CloudHistoryQuery, CloudHistoryRecord } from "../mega/cloud-history.js";
 import type { Readable } from "node:stream";
+import type { ExperimentalCommandRequest } from "../stream/first-party-ppcs.js";
 
 import type { CameraCapabilityManifest, CameraIdentity, CameraPresetPosition, DetectionKind, DeviceCapabilityManifest, EventReceiverState, HomeBaseState, InventoryDiagnostic, PushDiagnostic, SecuritySensorState, VideoCodec } from "../domain/types.js";
 
@@ -79,6 +80,13 @@ export interface CameraProvider {
 
   /** Send the camera's physically verified automatic-cruise action. */
   setCameraAutoCruise(serial: string, enabled: boolean): Promise<void>;
+
+  /** Experimental: send one raw command for PTZ discovery and return observed replies. */
+  sendExperimentalCommand?(
+    serial: string,
+    request: ExperimentalCommandRequest,
+    useLiveSession: boolean,
+  ): Promise<string[]>;
 
   /** Trigger or stop a HomeBase siren using its station-side duration command. */
   setHomeBaseSiren(serial: string, durationSeconds: number): Promise<HomeBaseState>;
