@@ -983,6 +983,21 @@ export class CameraControlAcknowledgementTimeoutError extends Error {
  * key unwrap or media start. The public stats object makes that distinction
  * visible in diagnostics.
  */
+/** Wire envelope used by the experimental command tool. */
+export type ExperimentalEnvelope = "json1700" | "json1350" | "int";
+
+/** Encryption level used by the experimental command tool. */
+export type ExperimentalEncryption = "level1" | "level2";
+
+/** One experimental command request for protocol discovery. */
+export interface ExperimentalCommandRequest {
+  readonly envelope: ExperimentalEnvelope;
+  readonly encryption: ExperimentalEncryption;
+  readonly command: number;
+  readonly value: number;
+  readonly data: Readonly<Record<string, unknown>>;
+  readonly repeat: number;
+}
 export class FirstPartyPpcsSession {
 
   /** Ordered Annex-B video bytes; the session ends this stream when it closes. */
@@ -1090,6 +1105,7 @@ export class FirstPartyPpcsSession {
   #pendingControl: PendingControl | null = null;
   #pendingControlQuery: PendingControlQuery | null = null;
   #pendingCameraInfo: PendingCameraInfo | null = null;
+  #experimentalCapture: string[] | null = null;
 
   /** Return the codec proven by emitted NAL headers, or frame metadata as a fallback. */
   get videoCodec(): VideoCodec | null {
@@ -1438,6 +1454,92 @@ export class FirstPartyPpcsSession {
     await this.#sendControlPayload(6031, { value: enabled ? 1 : 0 });
     await delay(500);
   }
+  /**
+   * Experimental: send one raw command for PTZ protocol discovery.
+   *
+   * Works in media and control sessions. Returns a description of every
+   * non-video frame received during a short window after sending.
+   */
+  async sendExperimentalCommand(request: ExperimentalCommandRequest): Promise<string[]> {
+    if (!this.#remote) throw new Error("Experimental command session is not connected");
+    if (this.#experimentalCapture) throw new Error("An experimental command is already running");
+    const channel = this.#options.channel;
+    const accountId = this.#options.accountId ?? "";
+    const legacyKey = commandKey(this.#options.stationSerial, this.#options.p2pDid);
+    const level2 = request.encryption === "level2";
+    if (level2) await this.#waitForLevel2Key();
+
+    const build = (): { readonly command: number; readonly payload: Buffer } => {
+      if (request.envelope === "json1700") {
+        const value = Buffer.from(buildCameraControlQueryValue(request.command, request.data));
+        return {
+          command: 1700,
+          payload: level2
+            ? rawPayload(encryptLevel2(value, this.#level2Key!, this.#level2Seq++), channel, 8, [8, 0], 0)
+            : rawPayload(encryptLevel1(value, legacyKey), channel, 1, [1, 0], 0),
+        };
+      }
+      if (!accountId) throw new Error("Account identity is unavailable for this envelope");
+      if (request.envelope === "json1350") {
+        const value = Buffer.from(JSON.stringify({
+          account_id: accountId,
+          cmd: request.command,
+          mChannel: channel,
+          mValue3: 0,
+          payload: request.data,
+        }));
+        return {
+          command: 1350,
+          payload: level2
+            ? rawPayload(encryptLevel2(value, this.#level2Key!, this.#level2Seq++), 0, 8, [8, 0], 0)
+            : rawPayload(encryptLevel1(value, legacyKey), 0, 1, [1, 0], 0),
+        };
+      }
+      return {
+        command: request.command,
+        payload: level2
+          ? rawPayload(
+            encryptLevel2(buildCameraEnableBody(channel, request.value, accountId), this.#level2Key!, this.#level2Seq++),
+            channel, 8, [8, 0], 0,
+          )
+          : buildIntStringCommandBody(request.value, channel, accountId, legacyKey),
+      };
+    };
+
+    const repeat = Math.min(Math.max(Math.trunc(request.repeat), 1), 5);
+    const captured: string[] = [];
+    this.#experimentalCapture = captured;
+    try {
+      for (let index = 0; index < repeat; index += 1) {
+        const frame = build();
+        this.#sendCommand(frame.command, frame.payload);
+        if (index < repeat - 1) await delay(200);
+      }
+      await delay(2_000);
+      return [...captured];
+    } finally {
+      this.#experimentalCapture = null;
+    }
+  }
+
+  /** Experimental: describe one received frame, decrypting it where possible. */
+  #describeExperimentalFrame(command: number, signCode: number, flag: number, payload: Buffer): string {
+    let clear: Buffer | undefined = payload;
+    if ((signCode === 2 || signCode === 8) && this.#level2Key) {
+      clear = decryptLevel2(payload, this.#level2Key, signCode);
+    } else if (signCode > 0 && payload.length > 0 && payload.length % 16 === 0) {
+      try {
+        clear = decryptEcb(payload, commandKey(this.#options.stationSerial, this.#options.p2pDid));
+      } catch {
+        clear = undefined;
+      }
+    }
+    const int32 = clear && clear.length >= 4 ? String(clear.readInt32LE(0)) : "-";
+    const text = clear
+      ? clear.toString("latin1").replace(/[^\x20-\x7e]/g, ".").slice(0, 400)
+      : "<undecryptable>";
+    return `cmd=${command} sign=${signCode} flag=${flag} len=${payload.length} int32=${int32} text=${text}`;
+  }
 
   /**
    * End the peer session and retain its terminal reason for diagnostics.
@@ -1651,6 +1753,9 @@ export class FirstPartyPpcsSession {
     const shape = `${command}:${signCode}:${size}:${type}`;
     if (!this.stats.frameShapes.includes(shape) && this.stats.frameShapes.length < 20) {
       this.stats.frameShapes.push(shape);
+    }
+    if (this.#experimentalCapture && command !== 1300 && this.#experimentalCapture.length < 20) {
+      this.#experimentalCapture.push(this.#describeExperimentalFrame(command, signCode, header[14] ?? 0, payload));
     }
 
     if (header[14] === 1 && this.#pendingControl?.command === command) {
