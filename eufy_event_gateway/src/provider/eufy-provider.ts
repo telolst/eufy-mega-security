@@ -242,6 +242,9 @@ export function supportsT8170PanTilt(device: Pick<MegaInventoryDevice, "model">)
   return device.model.toUpperCase().startsWith("T8170");
 }
 
+/** T8170 presets rarely change; querying them stops live view, so cache them. */
+const T8170_PRESET_CACHE_MS = 10 * 60_000;
+
 /** Safe, grouped inventory evidence suitable for copied support logs. */
 export interface InventoryLogSummary {
   readonly count: number;
@@ -297,6 +300,7 @@ export class EufyProvider implements CameraProvider, CaptchaProvider {
   readonly #lightOperations = new Map<string, Promise<void>>();
   readonly #t817lControlOperations = new Map<string, Promise<void>>();
   readonly #ptzQueues = new Map<string, Promise<void>>();
+  readonly #t8170PresetCache = new Map<string, { readonly at: number; readonly positions: readonly CameraPresetPosition[] }>();
   readonly #pendingSensorMotionCloudConfirmations = new Set<string>();
   readonly #liveDeviceReads = new Map<string, MegaInventoryReads>();
   readonly #liveDeviceParamTypes = new Map<string, readonly number[]>();
@@ -1327,7 +1331,7 @@ export class EufyProvider implements CameraProvider, CaptchaProvider {
   /** Query privacy-safe preset occupancy over the camera's live HomeBase route. */
   async getCameraPresetPositions(serial: string): Promise<readonly CameraPresetPosition[]> {
     const device = this.#devices.get(serial);
-    if (device && supportsT8170PanTilt(device)) return this.#getT8170Presets(device);
+    if (device && supportsT8170PanTilt(device)) return this.#cachedT8170Presets(device);
     if (!device || !isSupportedMegaCamera(device) || !supportsPresetPositions(device)) {
       throw new Error("Camera preset positions are not supported for this camera");
     }
@@ -1434,15 +1438,35 @@ export class EufyProvider implements CameraProvider, CaptchaProvider {
     const current = previous.catch(() => undefined).then(async () => {
       const device = this.#devices.get(serial);
       if (!device || !supportsT8170PanTilt(device)) throw new Error("Pan/tilt is not supported for this camera");
+      const live = this.#ppcsStreams.has(serial);
       await this.sendExperimentalCommand(serial, {
-        envelope: "json1700", encryption: "level1", command, value: 0, data, repeat: 1, captureMilliseconds: 0,
-      }, this.#ppcsStreams.has(serial));
+        envelope: "json1700", encryption: "level1", command, value: 0, data, repeat: 1,
+        captureMilliseconds: live ? 0 : 1_000,
+      }, live);
     });
     this.#ptzQueues.set(serial, current);
     void current.finally(() => {
       if (this.#ptzQueues.get(serial) === current) this.#ptzQueues.delete(serial);
     }).catch(() => undefined);
     return current;
+  }
+
+  /** Serve cached T8170 presets, or query them inside the PTZ queue. */
+  #cachedT8170Presets(device: MegaInventoryDevice): Promise<readonly CameraPresetPosition[]> {
+    const serial = device.serial;
+    const cached = this.#t8170PresetCache.get(serial);
+    if (cached && Date.now() - cached.at < T8170_PRESET_CACHE_MS) return Promise.resolve(cached.positions);
+    const previous = this.#ptzQueues.get(serial) ?? Promise.resolve();
+    const current = previous.catch(() => undefined).then(() => this.#getT8170Presets(device));
+    const marker = current.then(() => undefined, () => undefined);
+    this.#ptzQueues.set(serial, marker);
+    void marker.finally(() => {
+      if (this.#ptzQueues.get(serial) === marker) this.#ptzQueues.delete(serial);
+    });
+    return current.then((positions) => {
+      this.#t8170PresetCache.set(serial, { at: Date.now(), positions });
+      return positions;
+    });
   }
 
   /** Read stored T8170 positions. This needs a control session and briefly stops live view. */
@@ -1459,6 +1483,7 @@ export class EufyProvider implements CameraProvider, CaptchaProvider {
       localAddress: peer.localAddress, dskKey: dsk.key, channel: device.channel,
       cameraModel: device.model, accountId: device.adminUserId,
       homeBaseAttached: false, purpose: "control", maxSeconds: 30,
+      resolveCipherKey: (cipherId: number) => this.#resolveCipherKey(cipherId, peer),
     });
     try {
       await session.start();
