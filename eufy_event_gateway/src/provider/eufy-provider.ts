@@ -25,7 +25,7 @@ import { HomeBaseCommandAcknowledgementTimeoutError, HomeBasePpcsSession, type H
 import type { SensorContactObservation } from "../stream/sensor-status-notification.js";
 import { cameraCapabilityLogSummaries, describeCameraCapabilities, isSupportedCameraType, describeDeviceCapabilities, deviceCapabilityLogSummaries } from "./device-capabilities-core.js";
 import { catalogueIntegrationStatus, hasMainsBatterySentinel } from "./camera-capability-core.js";
-import type { CameraProvider, CaptchaChallenge, CaptchaProvider, ProviderEvents } from "./provider.js";
+import type { CameraProvider, CaptchaChallenge, CaptchaProvider, PanTiltDirection, ProviderEvents } from "./provider.js";
 import { PushEventDeduplicator } from "./push-event-deduplicator.js";
 import { resolveDeviceRoute } from "./device-routing.js";
 
@@ -237,6 +237,11 @@ export function supportsPresetPositions(device: Pick<MegaInventoryDevice, "model
   return device.model.toUpperCase().startsWith("T817L");
 }
 
+/** Return whether a camera uses the hardware-tested T8170 direct pan/tilt commands. */
+export function supportsT8170PanTilt(device: Pick<MegaInventoryDevice, "model">): boolean {
+  return device.model.toUpperCase().startsWith("T8170");
+}
+
 /** Safe, grouped inventory evidence suitable for copied support logs. */
 export interface InventoryLogSummary {
   readonly count: number;
@@ -291,6 +296,7 @@ export class EufyProvider implements CameraProvider, CaptchaProvider {
   readonly #nightVisionOperations = new Map<string, Promise<CameraIdentity>>();
   readonly #lightOperations = new Map<string, Promise<void>>();
   readonly #t817lControlOperations = new Map<string, Promise<void>>();
+  readonly #ptzQueues = new Map<string, Promise<void>>();
   readonly #pendingSensorMotionCloudConfirmations = new Set<string>();
   readonly #liveDeviceReads = new Map<string, MegaInventoryReads>();
   readonly #liveDeviceParamTypes = new Map<string, readonly number[]>();
@@ -1125,6 +1131,10 @@ export class EufyProvider implements CameraProvider, CaptchaProvider {
       && device.channel !== null
       && device.adminUserId !== null
       && isPpcsRouteReady(device, this.#devices, dskPeerSerials);
+    const t8170PtzSupported = supportsT8170PanTilt(device)
+      && route?.homeBaseAttached === false
+      && device.channel !== null
+      && isPpcsRouteReady(device, this.#devices, dskPeerSerials);
     return {
       serial: device.serial,
       name: device.name,
@@ -1224,7 +1234,8 @@ export class EufyProvider implements CameraProvider, CaptchaProvider {
         && device.channel !== null
         && device.adminUserId !== null
         && isPpcsRouteReady(device, this.#devices, dskPeerSerials),
-      presetPositionControlSupported: t817lControlsSupported,
+      presetPositionControlSupported: t817lControlsSupported || t8170PtzSupported,
+      panTiltControlSupported: t8170PtzSupported,
       aiTrackingControlSupported: t817lControlsSupported,
       autoCruiseControlSupported: t817lControlsSupported,
       battery: batteryState(device),
@@ -1316,6 +1327,7 @@ export class EufyProvider implements CameraProvider, CaptchaProvider {
   /** Query privacy-safe preset occupancy over the camera's live HomeBase route. */
   async getCameraPresetPositions(serial: string): Promise<readonly CameraPresetPosition[]> {
     const device = this.#devices.get(serial);
+    if (device && supportsT8170PanTilt(device)) return this.#getT8170Presets(device);
     if (!device || !isSupportedMegaCamera(device) || !supportsPresetPositions(device)) {
       throw new Error("Camera preset positions are not supported for this camera");
     }
@@ -1334,6 +1346,8 @@ export class EufyProvider implements CameraProvider, CaptchaProvider {
     if (!Number.isSafeInteger(index) || index < 0 || index > 9) {
       return Promise.reject(new Error("Camera preset index must be between 0 and 9"));
     }
+    const t8170 = this.#devices.get(serial);
+    if (t8170 && supportsT8170PanTilt(t8170)) return this.#queueT8170Move(serial, 6035, { value: index });
     return this.#queueT817LControl(serial, "preset_position", async (session) => {
       const positions = await session.queryPresetPositions();
       if (!positions.some((position) => position.index === index && position.enabled)) {
@@ -1403,6 +1417,52 @@ export class EufyProvider implements CameraProvider, CaptchaProvider {
       const replies = await session.sendExperimentalCommand(request);
       logger.info("experimental_command", `${summary} replies=${replies.length}`);
       return replies;
+    } finally {
+      session.close();
+    }
+  }
+
+  /** Move a T8170 one step, through the open live view when there is one. */
+  panTiltCamera(serial: string, direction: PanTiltDirection): Promise<void> {
+    const rotateType = { left: 1, right: 2, up: 3, down: 4 }[direction];
+    return this.#queueT8170Move(serial, 6030, { cmd_type: 1, rotate_type: rotateType });
+  }
+
+  /** Serialize T8170 movement so quick button presses cannot collide. */
+  #queueT8170Move(serial: string, command: number, data: Readonly<Record<string, unknown>>): Promise<void> {
+    const previous = this.#ptzQueues.get(serial) ?? Promise.resolve();
+    const current = previous.catch(() => undefined).then(async () => {
+      const device = this.#devices.get(serial);
+      if (!device || !supportsT8170PanTilt(device)) throw new Error("Pan/tilt is not supported for this camera");
+      await this.sendExperimentalCommand(serial, {
+        envelope: "json1700", encryption: "level1", command, value: 0, data, repeat: 1, captureMilliseconds: 0,
+      }, this.#ppcsStreams.has(serial));
+    });
+    this.#ptzQueues.set(serial, current);
+    void current.finally(() => {
+      if (this.#ptzQueues.get(serial) === current) this.#ptzQueues.delete(serial);
+    }).catch(() => undefined);
+    return current;
+  }
+
+  /** Read stored T8170 positions. This needs a control session and briefly stops live view. */
+  async #getT8170Presets(device: MegaInventoryDevice): Promise<readonly CameraPresetPosition[]> {
+    const route = ppcsStreamRoute(device, this.#devices);
+    const peer = route?.peer;
+    const dsk = peer ? await this.#dskKey(peer.serial) : null;
+    if (!route || route.homeBaseAttached || !peer?.p2pDid || !peer.p2pConnection || !dsk || device.channel === null) {
+      throw new Error("Preset query requires a ready direct route");
+    }
+    await this.stopStream(device.serial);
+    const session = new FirstPartyPpcsSession({
+      stationSerial: peer.serial, p2pDid: peer.p2pDid, appConnection: peer.p2pConnection,
+      localAddress: peer.localAddress, dskKey: dsk.key, channel: device.channel,
+      cameraModel: device.model, accountId: device.adminUserId,
+      homeBaseAttached: false, purpose: "control", maxSeconds: 30,
+    });
+    try {
+      await session.start();
+      return await session.queryPresetPositions();
     } finally {
       session.close();
     }
