@@ -41,6 +41,9 @@ export interface ProviderEvents {
 }
 
 /** Lifecycle and stream operations required by the gateway server. */
+/** One pan/tilt step direction. */
+export type PanTiltDirection = "left" | "right" | "up" | "down";
+
 export interface CameraProvider {
   /** Optional read-only cloud metadata, independent of local station storage. */
   cloudHistory?(serial: string, query: CloudHistoryQuery): Promise<readonly CloudHistoryRecord[]>;
@@ -87,6 +90,9 @@ export interface CameraProvider {
     request: ExperimentalCommandRequest,
     useLiveSession: boolean,
   ): Promise<string[]>;
+
+  /** Move a pan/tilt camera one step. */
+  panTiltCamera?(serial: string, direction: PanTiltDirection): Promise<void>;
 
   /** Trigger or stop a HomeBase siren using its station-side duration command. */
   setHomeBaseSiren(serial: string, durationSeconds: number): Promise<HomeBaseState>;
