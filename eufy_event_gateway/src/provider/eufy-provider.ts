@@ -20,7 +20,7 @@ import { guardModeMetadataShape } from "../mega/guard-mode-metadata.js";
 import { MegaClient } from "../mega/client.js";
 import { decodeEventImage, isJpeg } from "../mega/image.js";
 import { MegaPushReceiver, type MegaPushEvent } from "../mega/push.js";
-import { CameraControlAcknowledgementTimeoutError, FirstPartyPpcsSession, hasDecoderReadyKeyframe } from "../stream/first-party-ppcs.js";
+import { CameraControlAcknowledgementTimeoutError, FirstPartyPpcsSession, hasDecoderReadyKeyframe, type ExperimentalCommandRequest } from "../stream/first-party-ppcs.js";
 import { HomeBaseCommandAcknowledgementTimeoutError, HomeBasePpcsSession, type HomeBaseChildParam, type HomeBasePpcsState, type HomeBaseStorageDiagnostic } from "../stream/homebase-ppcs.js";
 import type { SensorContactObservation } from "../stream/sensor-status-notification.js";
 import { cameraCapabilityLogSummaries, describeCameraCapabilities, isSupportedCameraType, describeDeviceCapabilities, deviceCapabilityLogSummaries } from "./device-capabilities-core.js";
@@ -1351,6 +1351,61 @@ export class EufyProvider implements CameraProvider, CaptchaProvider {
   /** Send the reversible automatic-cruise action proven on local hardware. */
   setCameraAutoCruise(serial: string, enabled: boolean): Promise<void> {
     return this.#queueT817LControl(serial, "auto_cruise", (session) => session.writeAutoCruise(enabled));
+  }
+
+  /**
+   * Experimental: send one raw command for PTZ discovery.
+   *
+   * With `useLiveSession`, the command goes through the already-open live
+   * view, so the picture keeps running. Otherwise a short control session
+   * is opened (this stops any live view first).
+   */
+  async sendExperimentalCommand(
+    serial: string,
+    request: ExperimentalCommandRequest,
+    useLiveSession: boolean,
+  ): Promise<string[]> {
+    const device = this.#devices.get(serial);
+    if (!device || !isSupportedMegaCamera(device)) throw new Error(`Unknown Eufy camera: ${serial}`);
+    const summary = `model=${safeLogModel(device.model)} envelope=${request.envelope} encryption=${request.encryption} command=${request.command} live=${useLiveSession}`;
+
+    if (useLiveSession) {
+      const live = this.#ppcsStreams.get(serial);
+      if (!live) throw new Error("No live session is open for this camera. Open the live view first.");
+      const replies = await live.sendExperimentalCommand(request);
+      logger.info("experimental_command", `${summary} replies=${replies.length}`);
+      return replies;
+    }
+
+    const route = ppcsStreamRoute(device, this.#devices);
+    const peer = route?.peer;
+    const dsk = peer ? await this.#dskKey(peer.serial) : null;
+    if (!route || !peer?.p2pDid || !peer.p2pConnection || !dsk || device.channel === null) {
+      throw new Error("Experimental command requires a ready PPCS route");
+    }
+    await this.stopStream(serial);
+    const session = new FirstPartyPpcsSession({
+      stationSerial: peer.serial,
+      p2pDid: peer.p2pDid,
+      appConnection: peer.p2pConnection,
+      localAddress: peer.localAddress,
+      dskKey: dsk.key,
+      channel: device.channel,
+      cameraModel: device.model,
+      accountId: device.adminUserId,
+      homeBaseAttached: route.homeBaseAttached,
+      purpose: "control",
+      maxSeconds: 40,
+      resolveCipherKey: (cipherId: number) => this.#resolveCipherKey(cipherId, peer),
+    });
+    try {
+      await session.start();
+      const replies = await session.sendExperimentalCommand(request);
+      logger.info("experimental_command", `${summary} replies=${replies.length}`);
+      return replies;
+    } finally {
+      session.close();
+    }
   }
 
   /** Serialize T817L actions and release any live session before taking control. */
