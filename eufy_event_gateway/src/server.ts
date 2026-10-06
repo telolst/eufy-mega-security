@@ -16,7 +16,7 @@ import { GatewayState } from "./domain/gateway-state.js";
 import type { GatewayEvent } from "./domain/types.js";
 import { createLogger } from "./logging.js";
 import { SimulatedProvider } from "./provider/simulated-provider.js";
-import type { CameraProvider, CaptchaProvider } from "./provider/provider.js";
+import type { CameraProvider, CaptchaProvider, PanTiltDirection } from "./provider/provider.js";
 import { SnapshotStore } from "./storage/snapshot-store.js";
 import { validateCloudHistoryQuery } from "./mega/cloud-history.js";
 import { waitingImage } from "./mega/waiting-image.js";
@@ -212,6 +212,12 @@ export class GatewayServer {
         segments[0] === "api" && segments[1] === "cameras" && segments[3] === "preset-positions" && segments.length === 4
       ) {
         return await this.#cameraPresetPositions(segments[2]!, response);
+      }
+      if (
+        request.method === "POST" &&
+        segments[0] === "api" && segments[1] === "cameras" && segments[3] === "pan-tilt" && segments.length === 4
+      ) {
+        return await this.#cameraPanTilt(request, segments[2]!, response);
       }
       if (
         request.method === "POST" &&
@@ -483,6 +489,16 @@ ${result ? `<h2>Result</h2><pre>${escapeHtml(result)}</pre>` : ""}
     return json(response, 200, { ok: true });
   }
 
+  /** Move a pan/tilt camera one step. */
+  async #cameraPanTilt(request: IncomingMessage, serial: string, response: ServerResponse): Promise<void> {
+    if (!this.state.hasCamera(serial)) return json(response, 404, { error: "Camera not found" });
+    if (!this.provider.panTiltCamera) return json(response, 501, { error: "Pan/tilt is unavailable" });
+    const body = await readJson(request);
+    if (!isPanTiltDirection(body.direction)) throw new SyntaxError("Direction must be left, right, up or down");
+    await this.provider.panTiltCamera(serial, body.direction);
+    return json(response, 200, { ok: true });
+  }
+
   #stationJson(serial: string, response: ServerResponse): void {
     if (!this.state.hasStation(serial)) return json(response, 404, { error: "HomeBase not found" });
     return json(response, 200, this.state.getStation(serial));
@@ -695,6 +711,10 @@ function requiredInteger(value: unknown): number {
 function requiredBoolean(value: unknown): boolean {
   if (typeof value !== "boolean") throw new SyntaxError("Expected a boolean value");
   return value;
+}
+
+function isPanTiltDirection(value: unknown): value is PanTiltDirection {
+  return value === "left" || value === "right" || value === "up" || value === "down";
 }
 
 function safeCameraModel(value: string): string {
