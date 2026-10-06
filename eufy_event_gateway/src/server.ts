@@ -91,6 +91,11 @@ export class GatewayServer {
       if (request.method === "GET" && url.pathname === "/live") {
         return json(response, 200, { status: "ok" });
       }
+      if (request.method === "GET" && url.pathname === "/ptz") return this.#ptzPage(response);
+      if (request.method === "POST" && url.pathname === "/ptz") {
+        const values = new URLSearchParams(await readBody(request));
+        return await this.#ptzSubmit(values, response);
+      }
       if (request.method === "GET" && url.pathname === "/") return this.#authenticationPage(response);
       if (request.method === "POST" && url.pathname === "/") {
         const body = await readBody(request);
@@ -291,7 +296,68 @@ export class GatewayServer {
       : connection.state === "connected"
         ? `<p><strong>Connected to Eufy.</strong></p><p>The gateway is ready. Return to Home Assistant to review your cameras and entities.</p><a class="button" href="/config/integrations/integration/eufy_event_gateway" target="_top">View Eufy integration</a>`
         : `<p>No authentication challenge is waiting.</p><p>Current connection: <strong>${escapeHtml(connection.state)}</strong>${connection.detail ? `; ${escapeHtml(connection.detail)}` : ""}.</p>`;
-    return html(response, 200, `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Eufy Mega Security</title><style>body{font:16px system-ui,sans-serif;max-width:34rem;margin:4rem auto;padding:0 1.25rem;color:#202124}main{border:1px solid #ddd;border-radius:12px;padding:1.5rem}img{display:block;max-width:100%;margin:1rem 0;border:1px solid #ddd}label,input,button{display:block;width:100%;box-sizing:border-box}input,button,.button{font:inherit;padding:.75rem;margin:.4rem 0 1rem}.button{display:inline-block;width:auto;border-radius:999px;background:#03a9f4;color:#fff;text-decoration:none}button{cursor:pointer}</style><main><h1>Eufy Mega Security</h1>${message ? `<p role="status">${escapeHtml(message)}</p>` : ""}${content}</main></html>`);
+    return html(response, 200, `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Eufy Mega Security</title><style>body{font:16px system-ui,sans-serif;max-width:34rem;margin:4rem auto;padding:0 1.25rem;color:#202124}main{border:1px solid #ddd;border-radius:12px;padding:1.5rem}img{display:block;max-width:100%;margin:1rem 0;border:1px solid #ddd}label,input,button{display:block;width:100%;box-sizing:border-box}input,button,.button{font:inherit;padding:.75rem;margin:.4rem 0 1rem}.button{display:inline-block;width:auto;border-radius:999px;background:#03a9f4;color:#fff;text-decoration:none}button{cursor:pointer}</style><main><h1>Eufy Mega Security</h1>${message ? `<p role="status">${escapeHtml(message)}</p>` : ""}${content}<p><a href="ptz">PTZ experiments</a></p></main></html>`);
+  }
+  /** Experimental page for PTZ protocol discovery. */
+  #ptzPage(response: ServerResponse, values?: URLSearchParams, result = ""): void {
+    const get = (name: string, fallback: string): string => values?.get(name) ?? fallback;
+    const field = (name: string, fallback: string): string => escapeHtml(get(name, fallback));
+    const option = (name: string, value: string, label: string, fallback: string): string =>
+      `<option value="${escapeHtml(value)}"${get(name, fallback) === value ? " selected" : ""}>${escapeHtml(label)}</option>`;
+    const cameras = this.state.listCameras()
+      .map((camera) => option("camera", camera.serial, `${camera.name} (${camera.model})`, ""))
+      .join("");
+    const content = `<form method="post" action="">
+<label>Camera<select name="camera">${cameras}</select></label>
+<label>Session<select name="session">${option("session", "live", "Live view session (open the live view first)", "live")}${option("session", "control", "Separate control session (stops live view)", "live")}</select></label>
+<label>Envelope<select name="envelope">${option("envelope", "json1700", "1700 JSON {commandType, data}", "json1700")}${option("envelope", "json1350", "1350 JSON {cmd, payload}", "json1700")}${option("envelope", "int", "Integer value command", "json1700")}</select></label>
+<label>Level<select name="level">${option("level", "level1", "Level 1", "level1")}${option("level", "level2", "Level 2", "level1")}</select></label>
+<label>Command number<input name="command" inputmode="numeric" value="${field("command", "6030")}"></label>
+<label>Value (integer envelope only)<input name="value" inputmode="numeric" value="${field("value", "1")}"></label>
+<label>Data (JSON object, used by both JSON envelopes)<textarea name="data" rows="3">${field("data", '{"value":1}')}</textarea></label>
+<label>Repeat (1 to 5)<input name="repeat" inputmode="numeric" value="${field("repeat", "1")}"></label>
+<button type="submit">Send</button>
+</form>
+${result ? `<h2>Result</h2><pre>${escapeHtml(result)}</pre>` : ""}
+<p><a href="./">Back</a></p>`;
+    return html(response, 200, `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>PTZ experiments</title><style>body{font:16px system-ui,sans-serif;max-width:46rem;margin:2rem auto;padding:0 1rem;color:#202124}label{display:block;margin:.6rem 0}input,select,textarea,button{display:block;width:100%;box-sizing:border-box;font:inherit;padding:.5rem;margin-top:.2rem}button{cursor:pointer;margin-top:1rem}pre{white-space:pre-wrap;word-break:break-all;background:#f4f4f4;padding:.75rem;border-radius:8px}</style><h1>PTZ experiments</h1>${content}</html>`);
+  }
+
+  /** Validate the experiment form and forward it to the provider. */
+  async #ptzSubmit(values: URLSearchParams, response: ServerResponse): Promise<void> {
+    if (!this.provider.sendExperimentalCommand) {
+      return this.#ptzPage(response, values, "Experimental commands are unavailable with this provider.");
+    }
+    let result: string;
+    try {
+      const serial = values.get("camera") ?? "";
+      if (!this.state.hasCamera(serial)) throw new Error("Camera not found");
+      const envelope = values.get("envelope");
+      if (envelope !== "json1700" && envelope !== "json1350" && envelope !== "int") throw new Error("Unknown envelope");
+      const level = values.get("level");
+      if (level !== "level1" && level !== "level2") throw new Error("Unknown level");
+      const command = Number(values.get("command"));
+      if (!Number.isSafeInteger(command) || command < 1 || command > 65_535) throw new Error("Command must be 1 to 65535");
+      const value = Number(values.get("value") || "0");
+      if (!Number.isSafeInteger(value)) throw new Error("Value must be an integer");
+      const repeat = Number(values.get("repeat") || "1");
+      const parsed: unknown = JSON.parse(values.get("data")?.trim() || "{}");
+      if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) throw new Error("Data must be a JSON object");
+      const replies = await this.provider.sendExperimentalCommand(serial, {
+        envelope,
+        encryption: level,
+        command,
+        value,
+        data: parsed as Record<string, unknown>,
+        repeat: Number.isSafeInteger(repeat) ? repeat : 1,
+      }, values.get("session") === "live");
+      result = replies.length > 0
+        ? replies.join("\n")
+        : "Sent. No reply frames arrived within 2 seconds.";
+    } catch (error) {
+      result = `Error: ${safeError(error)}`;
+    }
+    return this.#ptzPage(response, values, result);
   }
 
   async #submitCaptcha(request: IncomingMessage, response: ServerResponse): Promise<void> {
