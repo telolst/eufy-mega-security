@@ -318,6 +318,7 @@ export interface CameraIdentity {
   readonly timedLightControlSupported?: boolean;
   readonly cameraSirenControlSupported?: boolean;
   readonly presetPositionControlSupported?: boolean;
+  readonly panTiltControlSupported?: boolean;
   readonly aiTrackingControlSupported?: boolean;
   readonly autoCruiseControlSupported?: boolean;
   readonly battery?: BatteryState | null;
