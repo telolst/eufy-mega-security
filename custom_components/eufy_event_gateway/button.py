@@ -84,6 +84,15 @@ async def async_setup_entry(
                         continue
                     known.add(light_key)
                     entities.append(EufyCameraLightButton(coordinator, serial, enabled))
+            if camera.get("panTiltControlSupported") is True:
+                for direction in PAN_TILT_DIRECTIONS:
+                    pan_key = (serial, f"pan_tilt_{direction}")
+                    if pan_key in known:
+                        continue
+                    known.add(pan_key)
+                    entities.append(
+                        EufyCameraPanTiltButton(coordinator, serial, direction)
+                    )
             for capability, entity_type in (
                 ("aiTrackingControlSupported", EufyCameraAiTrackingButton),
                 ("autoCruiseControlSupported", EufyCameraAutoCruiseButton),
@@ -235,6 +244,50 @@ class EufyCameraPresetButton(EufyGatewayEntity, ButtonEntity):
             raise HomeAssistantError(
                 f"Could not move to camera preset: {error}"
             ) from error
+
+
+_PAN_TILT_ICONS = {
+    "left": "mdi:arrow-left-bold",
+    "right": "mdi:arrow-right-bold",
+    "up": "mdi:arrow-up-bold",
+    "down": "mdi:arrow-down-bold",
+}
+PAN_TILT_DIRECTIONS = tuple(_PAN_TILT_ICONS)
+
+
+class EufyCameraPanTiltButton(EufyGatewayEntity, ButtonEntity):
+    """Nudge a pan/tilt camera one step without claiming a position state."""
+
+    def __init__(
+        self,
+        coordinator: EufyGatewayCoordinator,
+        serial: str,
+        direction: str,
+    ) -> None:
+        """Bind one movement direction to a capability-backed camera."""
+        EufyGatewayEntity.__init__(self, coordinator, serial)
+        ButtonEntity.__init__(self)
+        self._direction = direction
+        self._attr_unique_id = f"{serial}_camera_pan_tilt_{direction}"
+        self._attr_translation_key = f"camera_pan_tilt_{direction}"
+        self._attr_icon = _PAN_TILT_ICONS[direction]
+
+    @property
+    def available(self) -> bool:
+        """Disable the action when fresh inventory withdraws pan/tilt support."""
+        return (
+            super().available
+            and self.camera.get("panTiltControlSupported") is True
+        )
+
+    async def async_press(self) -> None:
+        """Send one movement step and never retry an ambiguous acknowledgement."""
+        try:
+            await self.coordinator.client.pan_tilt_camera(
+                self.serial, self._direction
+            )
+        except GatewayClientError as error:
+            raise HomeAssistantError(f"Could not move camera: {error}") from error
 
 
 class EufyCameraAiTrackingButton(EufyGatewayEntity, ButtonEntity):

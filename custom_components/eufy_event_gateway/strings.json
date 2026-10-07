@@ -38,6 +38,18 @@
       },
       "camera_auto_cruise_off": {
         "name": "Stop automatic cruise"
+      },
+      "camera_pan_tilt_left": {
+        "name": "Pan left"
+      },
+      "camera_pan_tilt_right": {
+        "name": "Pan right"
+      },
+      "camera_pan_tilt_up": {
+        "name": "Tilt up"
+      },
+      "camera_pan_tilt_down": {
+        "name": "Tilt down"
       }
     },
     "alarm_control_panel": {
