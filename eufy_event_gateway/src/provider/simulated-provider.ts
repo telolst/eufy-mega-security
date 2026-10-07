@@ -76,6 +76,7 @@ export class SimulatedProvider implements CameraProvider {
       timedLightControlSupported: true,
       cameraSirenControlSupported: true,
       presetPositionControlSupported: false,
+      panTiltControlSupported: false,
       aiTrackingControlSupported: false,
       autoCruiseControlSupported: false,
       battery: {
