@@ -1829,6 +1829,7 @@ export class FirstPartyPpcsSession {
     else if (command === 1103) this.#inspectCameraInfo(payload, signCode);
     else if (command === 1300 && (!this.#options.homeBaseAttached || acceptsAttachedCameraMedia(command, frameChannel ?? -1, this.#options.channel))) {
       this.stats.videoFrames++;
+      if (this.stats.videoFrames === 1) this.#mark("first_video");
       if (this.#writeVideo(payload, signCode)) {
         const decoderReady = hasDecoderReadyKeyframe(this.stats.videoCodec, this.stats.videoNalTypes);
         this.#lastDeliveredMediaFrameAt = Date.now();
