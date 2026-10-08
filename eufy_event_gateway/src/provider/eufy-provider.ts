@@ -2605,7 +2605,7 @@ export function isPpcsRouteReady(
 export function ppcsStreamLogSummary(
   model: string,
   route: PpcsStreamRoute | null,
-  stats: Pick<FirstPartyPpcsSession["stats"], "camId" | "dataDatagrams" | "frameHeaders" | "videoFrames"> & Partial<Pick<FirstPartyPpcsSession["stats"], "alternateLookupCandidates" | "batteryHistory" | "closeReason" | "commands" | "directLookupCandidates" | "duplicateDatagrams" | "foreignVideoFrames" | "frameShapes" | "incompleteAccessUnitBytes" | "incompleteAccessUnits" | "localLookupCandidates" | "mediaStartAttempts" | "mediaStartProtocols" | "mediaStopAttempts" | "mediaStopProtocol" | "parserBlocked" | "parserResyncs" | "pendingBytes" | "sequenceGaps" | "sequenceRestarts" | "staleDatagrams" | "types" | "videoCodec" | "videoNalTypes" | "videoOutputFrames" | "videoResults">>,
+  stats: Pick<FirstPartyPpcsSession["stats"], "camId" | "dataDatagrams" | "frameHeaders" | "videoFrames"> & Partial<Pick<FirstPartyPpcsSession["stats"], "alternateLookupCandidates" | "batteryHistory" | "closeReason" | "commands" | "directLookupCandidates" | "duplicateDatagrams" | "foreignVideoFrames" | "frameShapes" | "incompleteAccessUnitBytes" | "incompleteAccessUnits" | "localLookupCandidates" | "mediaStartAttempts" | "mediaStartProtocols" | "timeline" | "mediaStopAttempts" | "mediaStopProtocol" | "parserBlocked" | "parserResyncs" | "pendingBytes" | "sequenceGaps" | "sequenceRestarts" | "staleDatagrams" | "types" | "videoCodec" | "videoNalTypes" | "videoOutputFrames" | "videoResults">>,
   error?: unknown,
 ): string {
   const stage = stats.camId === 0 ? "lookup" : stats.videoFrames === 0 ? "first_frame" : "media";
@@ -2652,6 +2652,7 @@ export function ppcsStreamLogSummary(
     `decoder_ready=${hasDecoderReadyKeyframe(codec, nalTypes)}`,
     `media_start_attempts=${stats.mediaStartAttempts ?? 0}`,
     `media_start_protocols=${stats.mediaStartProtocols?.join(",") || "none"}`,
+    `timeline=${stats.timeline?.join(",") || "none"}`,
     `media_stop_attempts=${stats.mediaStopAttempts ?? 0}`,
     `media_stop_protocol=${stats.mediaStopProtocol ?? "none"}`,
     `close_reason=${stats.closeReason ?? "unknown"}`,

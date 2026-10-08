@@ -1048,6 +1048,8 @@ export class FirstPartyPpcsSession {
     videoCodec: "unknown" as "h264" | "h265" | "unknown",
     videoNalTypes: [] as number[],
     mediaStartAttempts: 0,
+    startedAt: 0,
+    timeline: [] as string[],
     mediaStartProtocols: [] as ("level1" | "level2")[],
     mediaStopAttempts: 0,
     mediaStopProtocol: "none" as "none" | "level1-direct" | "level2-payload",
@@ -1129,7 +1131,15 @@ export class FirstPartyPpcsSession {
    * succeeded. Media sessions therefore retain a separate first-frame timer,
    * while every session gets a maximum-duration timer and heartbeat loop.
    */
+  /** Append one bounded millisecond marker relative to start(). */
+  #mark(label: string): void {
+    if (this.stats.timeline.length < 24) {
+      this.stats.timeline.push(`${label}:${Date.now() - this.stats.startedAt}`);
+    }
+  }
+
   async start(): Promise<void> {
+    this.stats.startedAt = Date.now();
 
     // Bind an ephemeral UDP port, then try LAN and cloud lookup addresses. A
     // successful CAM_ID response means the peer is reachable, not that video
@@ -1146,7 +1156,7 @@ export class FirstPartyPpcsSession {
       });
       const onMessage = (message: Buffer, info: RemoteInfo, socket: Socket): void => {
         try {
-          if (this.#handle(message, info, socket)) { clearTimeout(timeout); resolve(); }
+          if (this.#handle(message, info, socket)) { clearTimeout(timeout); this.#mark("lookup"); resolve(); }
         } catch (error) { clearTimeout(timeout); reject(error); }
       };
       this.#socket.on("message", (message, info) => onMessage(message, info, this.#socket));
@@ -1969,12 +1979,14 @@ export class FirstPartyPpcsSession {
     const cipherId = plainPayload.readUInt16LE(0);
     this.stats.cipherId = cipherId;
     let eccPrivateKey: string | undefined;
+    this.#mark("key_req");
     try { eccPrivateKey = await this.#options.resolveCipherKey!(cipherId); } catch (error) { this.stats.level2Error = error instanceof Error ? error.message : String(error); return; }
     if (!eccPrivateKey) { this.stats.level2Error = "no ECC private key"; return; }
     this.#videoDecoder.setEccPrivateKey(eccPrivateKey);
     const plain = unwrapGatewayInfo(plainPayload.subarray(4, 133), eccPrivateKey);
     if (!plain || plain.length < 32) { this.stats.level2Error = "gateway info ECIES unwrap failed"; return; }
     this.#level2Key = plain.subarray(0, 32);
+    this.#mark("level2_key");
     this.stats.level2++;
     if (this.#options.purpose !== "control") {
       if (this.#options.homeBaseAttached) this.#startAttachedMedia();
@@ -2138,6 +2150,7 @@ export class FirstPartyPpcsSession {
   /** Send START_LIVE using the strongest protection negotiated with a standalone peer. */
   #startOwnMedia(): void {
     this.stats.mediaStartAttempts++;
+    this.#mark(this.#level2Key ? "start_l2" : "start_l1");
     const key = publicModulus(this.#rsa.publicKey);
     const now = Date.now();
     const value = JSON.stringify({ commandType: 1000, data: {
