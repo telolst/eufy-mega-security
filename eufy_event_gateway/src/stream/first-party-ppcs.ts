@@ -1171,7 +1171,7 @@ export class FirstPartyPpcsSession {
         this.#socket.setBroadcast(true);
         const port = this.#socket.address().port;
         void detectLocalIpv4().then((host) => {
-          if (host && !this.#closed) this.#selfAddress = { host, port };
+          if (host && !this.#closed) { this.#selfAddress = { host, port }; this.#mark("self_addr"); }
         });
         this.#lookupSockets = new PpcsLookupSocketPool(this.#socket, onMessage, (error) => {
           clearTimeout(timeout);
@@ -1605,13 +1605,16 @@ export class FirstPartyPpcsSession {
       this.#send(REQ.localLookup, local, address);
     }
     for (const socket of this.#lookupSockets?.sockets ?? [this.#socket]) {
-      const lookup = buildPpcsCloudLookup(
-        this.#options.p2pDid,
-        this.#options.dskKey,
-        this.#selfAddress ? { host: this.#selfAddress.host, port: socket.address().port } : undefined,
-      );
+      const lookups = [buildPpcsCloudLookup(this.#options.p2pDid, this.#options.dskKey)];
+      if (this.#selfAddress) {
+        lookups.push(buildPpcsCloudLookup(
+          this.#options.p2pDid,
+          this.#options.dskKey,
+          { host: this.#selfAddress.host, port: socket.address().port },
+        ));
+      }
       for (const address of decodeCloudAddresses(this.#options.appConnection)) {
-        this.#send(lookup.type, lookup.payload, address, socket);
+        for (const lookup of lookups) this.#send(lookup.type, lookup.payload, address, socket);
       }
     }
   }
@@ -1632,6 +1635,7 @@ export class FirstPartyPpcsSession {
     if (this.#closed || (this.#remote && socket !== this.#socket)) return false;
     if (has(message, RESP.localLookup)) {
       this.stats.localLookupCandidates++;
+      if (this.stats.localLookupCandidates === 1) this.#mark("cand_local");
       const source = { host: info.address, port: info.port };
       this.#checkCandidate(source, socket);
       const advertised = ppcsLookupCandidate(message);
@@ -1646,6 +1650,7 @@ export class FirstPartyPpcsSession {
     if (candidate) {
       if (has(message, RESP.lookupAddr2)) this.stats.alternateLookupCandidates++;
       else this.stats.directLookupCandidates++;
+      if (this.stats.alternateLookupCandidates + this.stats.directLookupCandidates === 1) this.#mark(has(message, RESP.lookupAddr2) ? "cand_alt" : "cand_direct");
       if (candidate.host !== "0.0.0.0") this.#checkCandidate(candidate, socket);
       return false;
     }
