@@ -399,11 +399,21 @@ export class EufyProvider implements CameraProvider, CaptchaProvider {
   startStream(serial: string): Promise<void> {
     const pending = this.#streamStarts.get(serial);
     if (pending) return pending;
-    const start: Promise<void> = this.#startStreamOnce(serial).finally(() => {
+    const start: Promise<void> = this.#startStreamWithRetry(serial).finally(() => {
       if (this.#streamStarts.get(serial) === start) this.#streamStarts.delete(serial);
     });
     this.#streamStarts.set(serial, start);
     return start;
+  }
+
+  /** A sleeping camera often misses the first lookup; the second one finds it awake. */
+  async #startStreamWithRetry(serial: string): Promise<void> {
+    try {
+      await this.#startStreamOnce(serial);
+    } catch (error) {
+      if (!String(error).includes("lookup timed out")) throw error;
+      await this.#startStreamOnce(serial);
+    }
   }
 
   async #startStreamOnce(serial: string): Promise<void> {
