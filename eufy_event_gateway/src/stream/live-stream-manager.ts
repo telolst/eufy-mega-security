@@ -1178,6 +1178,11 @@ function spawnH265ViewerTranscoder(): ChildProcessWithoutNullStreams {
     "-hide_banner",
     "-loglevel",
     "error",
+    // Raw HEVC carries in-band parameter sets; skip ffmpeg's default 5 s probe.
+    "-fflags", "nobuffer",
+    "-flags", "low_delay",
+    "-analyzeduration", "200000",
+    "-probesize", "262144",
     "-f",
     "hevc",
     "-i",
@@ -1197,6 +1202,7 @@ function spawnH265ViewerTranscoder(): ChildProcessWithoutNullStreams {
     // Short keyframe spacing lets a second viewer join the shared fallback
     // from a recent keyframe instead of waiting up to x264's default 250 frames.
     "repeat-headers=1:keyint=50",
+    "-flush_packets", "1",
     "-f",
     "h264",
     "pipe:1",
