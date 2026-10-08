@@ -246,8 +246,8 @@ export function supportsT8170PanTilt(device: Pick<MegaInventoryDevice, "model">)
 const T8170_PRESET_CACHE_MS = 10 * 60_000;
 
 /** A fresh lookup finds a just-woken camera at once; one long lookup misses it. */
-const STREAM_LOOKUP_TIMEOUT_MS = 6_000;
-const STREAM_LOOKUP_ATTEMPTS = 3;
+const STREAM_LOOKUP_TIMEOUT_MS = 8_000;
+const STREAM_LOOKUP_ATTEMPTS = 4;
 
 /** Safe, grouped inventory evidence suitable for copied support logs. */
 export interface InventoryLogSummary {
