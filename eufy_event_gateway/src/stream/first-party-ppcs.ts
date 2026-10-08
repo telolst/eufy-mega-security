@@ -32,6 +32,9 @@ const REQ = {
   lookup2: Buffer.from([0xf1, 0x6a]),
   localLookup: Buffer.from([0xf1, 0x30]),
   check: Buffer.from([0xf1, 0x41]),
+  check2: Buffer.from([0xf1, 0x83]),
+  turnServerInit: Buffer.from([0xf1, 0x70]),
+  turnClientOk: Buffer.from([0xf1, 0x72]),
   ping: Buffer.from([0xf1, 0xe0]),
   data: Buffer.from([0xf1, 0xd0]),
   ack: Buffer.from([0xf1, 0xd1]),
@@ -43,6 +46,7 @@ const RESP = {
   localLookup: Buffer.from([0xf1, 0x41]),
   camId: Buffer.from([0xf1, 0x42]),
   turnServerCamId: Buffer.from([0xf1, 0x84]),
+  turnServerOk: Buffer.from([0xf1, 0x71]),
   pong: Buffer.from([0xf1, 0xe1]),
   data: Buffer.from([0xf1, 0xd0]),
 } as const;
@@ -607,6 +611,12 @@ export function ppcsLookupCandidate(message: Buffer): { readonly host: string; r
     port: message.readUInt16LE(6),
     host: `${message[11]}.${message[10]}.${message[9]}.${message[8]}`,
   };
+}
+
+/** Read the 4 relay data bytes a LOOKUP_ADDR2 response carries for CHECK_CAM2. */
+export function ppcsRelayData(message: Buffer): Buffer | null {
+  if (!has(message, RESP.lookupAddr2) || message.length < 16) return null;
+  return message.subarray(12, 16);
 }
 
 /** Return whether a PPCS response completes either a direct or relay peer handshake. */
@@ -1619,6 +1629,19 @@ export class FirstPartyPpcsSession {
     }
   }
 
+  readonly #relayHandshakes = new Map<string, { host: string; port: number }>();
+
+  /** Start the TURN relay handshake a LOOKUP_ADDR2 response invites. */
+  #startRelayHandshake(candidate: { host: string; port: number }, data: Buffer, socket: Socket): void {
+    const key = `${candidate.host}:${candidate.port}`;
+    if (this.#relayHandshakes.has(key)) return;
+    this.#relayHandshakes.set(key, { host: candidate.host, port: candidate.port });
+    const payload = Buffer.concat([data, encodeDid(this.#options.p2pDid), Buffer.alloc(4)]);
+    for (let i = 0; i < 4; i++) this.#send(REQ.check2, payload, candidate, socket);
+    this.#send(REQ.turnServerInit, Buffer.alloc(0), candidate, socket);
+    this.#mark("relay_init");
+  }
+
   /** Probe the base and adjacent ports on one lookup candidate for CAM_ID. */
   #checkCandidate(address: { host: string; port: number }, socket: Socket): void {
     for (const port of ppcsCandidatePorts(address.port)) this.#check({ host: address.host, port }, socket);
@@ -1651,7 +1674,21 @@ export class FirstPartyPpcsSession {
       if (has(message, RESP.lookupAddr2)) this.stats.alternateLookupCandidates++;
       else this.stats.directLookupCandidates++;
       if (this.stats.alternateLookupCandidates + this.stats.directLookupCandidates === 1) this.#mark(has(message, RESP.lookupAddr2) ? "cand_alt" : "cand_direct");
-      if (candidate.host !== "0.0.0.0") this.#checkCandidate(candidate, socket);
+      if (candidate.host !== "0.0.0.0") {
+        this.#checkCandidate(candidate, socket);
+        if (has(message, RESP.lookupAddr2)) {
+          const relayData = ppcsRelayData(message);
+          if (relayData) this.#startRelayHandshake(candidate, relayData, socket);
+        }
+      }
+      return false;
+    }
+    if (has(message, RESP.turnServerOk)) {
+      const key = `${info.address}:${info.port}`;
+      if (this.#relayHandshakes.has(key)) {
+        this.#send(REQ.turnClientOk, Buffer.alloc(0), { host: info.address, port: info.port }, socket);
+        this.#mark("relay_ok");
+      }
       return false;
     }
     if (isPpcsCameraIdentity(message)) {
