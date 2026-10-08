@@ -616,7 +616,7 @@ export function ppcsLookupCandidate(message: Buffer): { readonly host: string; r
 /** Read the 4 relay data bytes a LOOKUP_ADDR2 response carries for CHECK_CAM2. */
 export function ppcsRelayData(message: Buffer): Buffer | null {
   if (!has(message, RESP.lookupAddr2) || message.length < 16) return null;
-  return message.subarray(12, 16);
+  return message.subarray(14, 18);
 }
 
 /** Return whether a PPCS response completes either a direct or relay peer handshake. */
