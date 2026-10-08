@@ -825,6 +825,7 @@ interface PendingPpcsFrame {
  * account inventory or persists cryptographic material itself.
  */
 export interface PpcsCameraOptions {
+  readonly lookupTimeoutMs?: number;
 
   /** Serial used only to derive the observed legacy level-one command key. */
   readonly stationSerial: string;
@@ -1148,7 +1149,7 @@ export class FirstPartyPpcsSession {
       const timeout = setTimeout(() => {
         this.close("start_failed");
         reject(new Error("PPCS camera lookup timed out"));
-      }, 20_000);
+      }, this.#options.lookupTimeoutMs ?? 20_000);
       this.#socket.once("error", (error) => {
         clearTimeout(timeout);
         this.close("start_failed");

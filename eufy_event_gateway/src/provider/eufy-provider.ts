@@ -245,6 +245,10 @@ export function supportsT8170PanTilt(device: Pick<MegaInventoryDevice, "model">)
 /** T8170 presets rarely change; querying them stops live view, so cache them. */
 const T8170_PRESET_CACHE_MS = 10 * 60_000;
 
+/** A fresh lookup finds a just-woken camera at once; one long lookup misses it. */
+const STREAM_LOOKUP_TIMEOUT_MS = 6_000;
+const STREAM_LOOKUP_ATTEMPTS = 4;
+
 /** Safe, grouped inventory evidence suitable for copied support logs. */
 export interface InventoryLogSummary {
   readonly count: number;
@@ -406,13 +410,15 @@ export class EufyProvider implements CameraProvider, CaptchaProvider {
     return start;
   }
 
-  /** A sleeping camera often misses the first lookup; the second one finds it awake. */
+  /** Retry timed-out lookups with fresh sessions; a woken camera answers a new lookup at once. */
   async #startStreamWithRetry(serial: string): Promise<void> {
-    try {
-      await this.#startStreamOnce(serial);
-    } catch (error) {
-      if (!String(error).includes("lookup timed out")) throw error;
-      await this.#startStreamOnce(serial);
+    for (let attempt = 1; ; attempt++) {
+      try {
+        await this.#startStreamOnce(serial);
+        return;
+      } catch (error) {
+        if (attempt >= STREAM_LOOKUP_ATTEMPTS || !String(error).includes("lookup timed out")) throw error;
+      }
     }
   }
 
@@ -429,7 +435,7 @@ export class EufyProvider implements CameraProvider, CaptchaProvider {
       const initialEccPrivateKey = !route.homeBaseAttached && device.cipherId !== null
         ? await this.#resolveCipherKey(device.cipherId, peer)
         : undefined;
-      const stream = new FirstPartyPpcsSession({
+      const stream = new FirstPartyPpcsSession({ lookupTimeoutMs: STREAM_LOOKUP_TIMEOUT_MS,
         stationSerial: peer.serial, p2pDid: peer.p2pDid, appConnection: peer.p2pConnection,
         localAddress: peer.localAddress,
         dskKey: dsk.key, channel: device.channel, cameraModel: device.model, stationModel: peer.model,
