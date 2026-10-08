@@ -1189,6 +1189,7 @@ function spawnH265ViewerTranscoder(): ChildProcessWithoutNullStreams {
     "ultrafast",
     "-tune",
     "zerolatency",
+    "-crf", "23", "-maxrate", "2M", "-bufsize", "4M",
     "-pix_fmt",
     "yuv420p",
     "-x264-params",

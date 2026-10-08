@@ -300,6 +300,7 @@ export class EufyProvider implements CameraProvider, CaptchaProvider {
   readonly #lightOperations = new Map<string, Promise<void>>();
   readonly #t817lControlOperations = new Map<string, Promise<void>>();
   readonly #ptzQueues = new Map<string, Promise<void>>();
+  readonly #streamStarts = new Map<string, Promise<void>>();
   readonly #t8170PresetCache = new Map<string, { readonly at: number; readonly positions: readonly CameraPresetPosition[] }>();
   readonly #pendingSensorMotionCloudConfirmations = new Set<string>();
   readonly #liveDeviceReads = new Map<string, MegaInventoryReads>();
@@ -394,7 +395,18 @@ export class EufyProvider implements CameraProvider, CaptchaProvider {
     await this.#completeStartup(events, generation);
   }
 
-  async startStream(serial: string): Promise<void> {
+  /** Join concurrent starts so one camera never gets two parallel PPCS lookups. */
+  startStream(serial: string): Promise<void> {
+    const pending = this.#streamStarts.get(serial);
+    if (pending) return pending;
+    const start: Promise<void> = this.#startStreamOnce(serial).finally(() => {
+      if (this.#streamStarts.get(serial) === start) this.#streamStarts.delete(serial);
+    });
+    this.#streamStarts.set(serial, start);
+    return start;
+  }
+
+  async #startStreamOnce(serial: string): Promise<void> {
     const device = this.#devices.get(serial);
     if (!device || !isSupportedMegaCamera(device)) throw new Error(`Unknown Eufy camera: ${serial}`);
     const route = ppcsStreamRoute(device, this.#devices);
