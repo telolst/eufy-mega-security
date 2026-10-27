@@ -514,7 +514,8 @@ export function supportsSoloCamPresetControl(
   route: Pick<PpcsStreamRoute, "homeBaseAttached" | "peer"> | null,
   routeReady: boolean,
 ): boolean {
-  return supportsStandalonePanControl(device, route, routeReady) ||
+  return supportsStandalonePanControl(device, route, routeReady)
+    || supportsT8170PanControl(device, route, routeReady) ||
     (device.model === "T8171" && device.deviceType === 88 && device.channel === 1 && Boolean(device.adminUserId) && routeReady &&
       route?.homeBaseAttached === true && route.peer.model === "T8030" && route.peer.serial !== device.serial);
 }
@@ -546,7 +547,22 @@ export function supportsStandaloneAiTracking(
 export function supportsPresetPositions(
   device: Pick<MegaInventoryDevice, "model"> & Partial<Pick<MegaInventoryDevice, "deviceType">>,
 ): boolean {
-  return device.model.toUpperCase().startsWith("T817L") || (device.model === "T8171" && device.deviceType === 88);
+  return device.model.toUpperCase().startsWith("T817L") || (device.model === "T8171" && device.deviceType === 88)
+    || (device.model === "T8170" && device.deviceType === 48);
+}
+
+/**
+ * Admit the SoloCam S340 (T8170) on its own direct route. Stored presets
+ * (6034/6035) and pan/tilt steps (6030) were verified on hardware.
+ */
+export function supportsT8170PanControl(
+  device: Pick<MegaInventoryDevice, "serial" | "model" | "deviceType" | "channel" | "adminUserId">,
+  route: Pick<PpcsStreamRoute, "homeBaseAttached" | "peer"> | null,
+  routeReady: boolean,
+): boolean {
+  return device.model === "T8170" && device.deviceType === 48 && device.channel === 0
+    && Boolean(device.adminUserId) && routeReady
+    && route?.homeBaseAttached === false && route.peer.serial === device.serial;
 }
 
 /** Safe, grouped inventory evidence suitable for copied support logs. */
@@ -4864,7 +4880,8 @@ export class EufyProvider implements CameraProvider, CaptchaProvider {
     if (!route || !peer?.p2pDid || !peer.p2pConnection || !dsk || device.channel === null || !device.adminUserId
       || (route.homeBaseAttached
         ? !device.model.toUpperCase().startsWith("T817L") && !supportsSoloCamPresetControl(device, route, true)
-        : !supportsStandalonePanControl(device, route, true) && !supportsStandaloneC31Presets(device, route, true))) {
+        : !supportsStandalonePanControl(device, route, true) && !supportsStandaloneC31Presets(device, route, true)
+          && !supportsT8170PanControl(device, route, true))) {
       throw new Error("Camera pan controls require a verified ready route");
     }
     return new FirstPartyPpcsSession({
