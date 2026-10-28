@@ -4755,9 +4755,13 @@ export class EufyProvider implements CameraProvider, CaptchaProvider {
     let positions: readonly CameraPresetPosition[] = [];
     await this.#queuePanControl(serial, "preset_query", async (session) => {
       positions = await session.queryPresetPositions();
+      this.#presetPositionCache.set(serial, positions);
     });
     return positions;
   }
+
+  /** Last preset occupancy per camera; a live viewer session cannot carry the 6034 query. */
+  readonly #presetPositionCache = new Map<string, readonly CameraPresetPosition[]>();
 
   /** Move once to an enabled stored position after refreshing slot occupancy. */
   selectCameraPresetPosition(serial: string, index: number): Promise<void> {
@@ -4768,8 +4772,17 @@ export class EufyProvider implements CameraProvider, CaptchaProvider {
       return Promise.reject(new Error("Camera preset index must be between 0 and 9"));
     }
     return this.#queuePanControl(serial, "preset_position", async (session) => {
-      const positions = await session.queryPresetPositions();
-      if (!positions.some((position) => position.index === index && position.enabled)) {
+      let positions: readonly CameraPresetPosition[] | undefined;
+      try {
+        positions = await session.queryPresetPositions();
+        this.#presetPositionCache.set(serial, positions);
+      } catch (error) {
+        // A live viewer session rejects the occupancy query; reuse the last read.
+        // Without a cached read the move proceeds: HA only offers enabled slots.
+        if (!String(error).includes("requires a control session")) throw error;
+        positions = this.#presetPositionCache.get(serial);
+      }
+      if (positions && !positions.some((position) => position.index === index && position.enabled)) {
         throw new Error("Camera preset position is not enabled");
       }
       await session.selectPresetPosition(index);

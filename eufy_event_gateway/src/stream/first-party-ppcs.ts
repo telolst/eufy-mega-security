@@ -3338,6 +3338,9 @@ export class FirstPartyPpcsSession {
 
   /** Preserve provider-validated viewer ownership only for the model's admitted commands. */
   #allowsViewerPanControl(command?: number): boolean {
+    // The T8170 accepts the stored-preset move on its own direct live route (hardware verified).
+    if (this.#options.cameraModel === "T8170" && !this.#options.homeBaseAttached
+      && this.#options.channel === 0 && command === 6035) return true;
     return supportsViewerPanControl(this.#options.cameraModel, Boolean(this.#options.homeBaseAttached), this.#options.channel, command);
   }
 
