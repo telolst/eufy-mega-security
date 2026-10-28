@@ -1036,6 +1036,12 @@ export class GatewayServer {
       }
       if (
         request.method === "POST" &&
+        segments[0] === "api" && segments[1] === "cameras" && segments[3] === "lens-trial" && segments.length === 4
+      ) {
+        return await this.#cameraLensTrial(request, segments[2]!, response);
+      }
+      if (
+        request.method === "POST" &&
         segments[0] === "api" && segments[1] === "cameras" && segments[3] === "ai-tracking" && segments.length === 4
       ) {
         return await this.#cameraAiTracking(request, segments[2]!, response);
@@ -1384,6 +1390,19 @@ export class GatewayServer {
     } else {
       await move();
     }
+    return json(response, 200, { ok: true });
+  }
+
+  /** Diagnostic: send one fixed lens/zoom candidate; never an arbitrary command. */
+  async #cameraLensTrial(request: IncomingMessage, serial: string, response: ServerResponse): Promise<void> {
+    if (!this.state.hasCamera(serial)) return json(response, 404, { error: "Camera not found" });
+    const body = await readJson(request);
+    const variant = body.variant;
+    if (typeof variant !== "string" || !["zoom-1", "zoom-3", "view-0", "view-1", "dual-0", "dual-12"].includes(variant)) {
+      throw new SyntaxError("Unknown lens trial variant");
+    }
+    if (!this.provider.lensTrialCamera) return json(response, 501, { error: "Lens trials are unavailable" });
+    await this.provider.lensTrialCamera(serial, variant);
     return json(response, 200, { ok: true });
   }
 

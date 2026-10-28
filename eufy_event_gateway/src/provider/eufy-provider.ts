@@ -4836,6 +4836,15 @@ export class EufyProvider implements CameraProvider, CaptchaProvider {
     return this.#queuePanControl(serial, "pan_tilt", (session) => session.panTilt(direction));
   }
 
+  /** Diagnostic: send one fixed lens/zoom candidate to a T8170. */
+  lensTrialCamera(serial: string, variant: string): Promise<void> {
+    const device = this.#devices.get(serial);
+    if (!device || device.model !== "T8170") {
+      return Promise.reject(new Error("Lens trials are only available for the T8170"));
+    }
+    return this.#queuePanControl(serial, "lens_trial", (session) => session.lensTrial(variant));
+  }
+
   /** Serialize pan actions on an existing decoded viewer or a newly owned control session. */
   #queuePanControl(
     serial: string,

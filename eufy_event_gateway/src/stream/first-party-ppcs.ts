@@ -2467,6 +2467,13 @@ export class FirstPartyPpcsSession {
     return parseCameraPresetPositions(payload);
   }
 
+  /** Diagnostic: send one fixed lens/zoom candidate from LENS_TRIALS. */
+  async lensTrial(variant: string): Promise<void> {
+    const trial = LENS_TRIALS[variant];
+    if (!trial) throw new Error("Unknown lens trial");
+    await this.#sendControlPayload(trial[0], trial[1]);
+  }
+
   /**
    * Nudge the camera one firmware-defined pan/tilt step. Command 6030 with
    * cmd_type 1 and rotate_type 1-4 (left, right, up, down) was verified on the T8170.
@@ -3349,7 +3356,8 @@ export class FirstPartyPpcsSession {
   #allowsViewerPanControl(command?: number): boolean {
     // The T8170 accepts stored-preset moves and pan/tilt steps on its own direct live route (hardware verified).
     if (this.#options.cameraModel === "T8170" && !this.#options.homeBaseAttached
-      && this.#options.channel === 0 && (command === 6035 || command === 6030)) return true;
+      && this.#options.channel === 0 && (command === 6035 || command === 6030
+        || command === 6203 || command === 2730 || command === 6243)) return true;
     return supportsViewerPanControl(this.#options.cameraModel, Boolean(this.#options.homeBaseAttached), this.#options.channel, command);
   }
 
@@ -3837,6 +3845,19 @@ function booleanFlag(value: unknown): boolean {
  * C31 viewers admit saved-position queries, movement and schedule-backed cruise actions.
  * Tracking and unrelated writes require separate validation.
  */
+/**
+ * Diagnostic lens/zoom candidates for the dual-lens T8170. The app switches
+ * between 1x and 3x on the running stream; which command it uses is unknown.
+ */
+const LENS_TRIALS: Readonly<Record<string, readonly [number, Record<string, number>]>> = {
+  "zoom-1": [6203, { dstZoom: 1 }],
+  "zoom-3": [6203, { dstZoom: 3 }],
+  "view-0": [2730, { mode: -1, quality: -1, primary_view: 0, sensor: 0 }],
+  "view-1": [2730, { mode: -1, quality: -1, primary_view: 1, sensor: 0 }],
+  "dual-0": [6243, { video_type: 0 }],
+  "dual-12": [6243, { video_type: 12 }],
+};
+
 export function supportsViewerPanControl(model: string | undefined, attached: boolean, channel: number, command?: number): boolean {
   return (model === "T8171" && channel === (attached ? 1 : 0))
     || (model === "T817L" && !attached && channel === 0 && (command === 6034 || command === 6035 || command === 6031));

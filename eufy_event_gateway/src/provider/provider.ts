@@ -209,6 +209,8 @@ export interface CameraProvider {
 
   /** Nudge a pan/tilt camera one firmware-defined step. */
   panTiltCamera?(serial: string, direction: "left" | "right" | "up" | "down"): Promise<void>;
+  /** Diagnostic: send one fixed lens/zoom candidate. */
+  lensTrialCamera?(serial: string, variant: string): Promise<void>;
 
   /** Send the camera's physically verified AI-tracking action. */
   setCameraAiTracking(serial: string, enabled: boolean): Promise<void>;
