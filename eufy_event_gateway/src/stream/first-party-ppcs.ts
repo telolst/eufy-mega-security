@@ -2468,6 +2468,15 @@ export class FirstPartyPpcsSession {
   }
 
   /**
+   * Nudge the camera one firmware-defined pan/tilt step. Command 6030 with
+   * cmd_type 1 and rotate_type 1-4 (left, right, up, down) was verified on the T8170.
+   */
+  async panTilt(direction: "left" | "right" | "up" | "down"): Promise<void> {
+    const rotateType = { left: 1, right: 2, up: 3, down: 4 }[direction];
+    await this.#sendControlPayload(6030, { cmd_type: 1, rotate_type: rotateType });
+  }
+
+  /**
    * Move to a stored position using the model's native absolute command.
    * Direct C31 and SoloCam movement require decoded live video. An owned control
    * connection drains temporary video; an existing viewer retains its output.
@@ -3338,9 +3347,9 @@ export class FirstPartyPpcsSession {
 
   /** Preserve provider-validated viewer ownership only for the model's admitted commands. */
   #allowsViewerPanControl(command?: number): boolean {
-    // The T8170 accepts the stored-preset move on its own direct live route (hardware verified).
+    // The T8170 accepts stored-preset moves and pan/tilt steps on its own direct live route (hardware verified).
     if (this.#options.cameraModel === "T8170" && !this.#options.homeBaseAttached
-      && this.#options.channel === 0 && command === 6035) return true;
+      && this.#options.channel === 0 && (command === 6035 || command === 6030)) return true;
     return supportsViewerPanControl(this.#options.cameraModel, Boolean(this.#options.homeBaseAttached), this.#options.channel, command);
   }
 

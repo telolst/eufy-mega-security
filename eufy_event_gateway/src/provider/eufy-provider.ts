@@ -4572,6 +4572,7 @@ export class EufyProvider implements CameraProvider, CaptchaProvider {
         && device.channel !== null
         && device.adminUserId !== null
         && isPpcsRouteReady(device, this.#devices, dskPeerSerials),
+      panTiltControlSupported: soloCamPanControlsSupported && device.model === "T8170",
       presetPositionControlSupported: t817lControlsSupported || soloCamPanControlsSupported
         || supportsStandaloneC31Presets(device, route, isPpcsRouteReady(device, this.#devices, dskPeerSerials)),
       storedRecordingsSupported: supportsSoloCamStoredRecordings(device, route, isPpcsRouteReady(device, this.#devices, dskPeerSerials)),
@@ -4823,6 +4824,15 @@ export class EufyProvider implements CameraProvider, CaptchaProvider {
     this.#assertLegacyCamera(serial);
     this.#assertNoModelTrial(serial);
     return this.#queuePanControl(serial, "auto_cruise", (session) => session.writeAutoCruise(enabled));
+  }
+
+  /** Nudge a T8170 one pan/tilt step through the shared pan-control queue. */
+  panTiltCamera(serial: string, direction: "left" | "right" | "up" | "down"): Promise<void> {
+    const device = this.#devices.get(serial);
+    if (!device || device.model !== "T8170") {
+      return Promise.reject(new Error("Pan/tilt is not supported for this camera"));
+    }
+    return this.#queuePanControl(serial, "pan_tilt", (session) => session.panTilt(direction));
   }
 
   /** Serialize pan actions on an existing decoded viewer or a newly owned control session. */

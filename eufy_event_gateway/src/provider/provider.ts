@@ -207,6 +207,9 @@ export interface CameraProvider {
   /** Move a camera once to an enabled stored position. */
   selectCameraPresetPosition(serial: string, index: number): Promise<void>;
 
+  /** Nudge a pan/tilt camera one firmware-defined step. */
+  panTiltCamera?(serial: string, direction: "left" | "right" | "up" | "down"): Promise<void>;
+
   /** Send the camera's physically verified AI-tracking action. */
   setCameraAiTracking(serial: string, enabled: boolean): Promise<void>;
 

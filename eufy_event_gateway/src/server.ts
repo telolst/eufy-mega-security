@@ -1030,6 +1030,12 @@ export class GatewayServer {
       }
       if (
         request.method === "POST" &&
+        segments[0] === "api" && segments[1] === "cameras" && segments[3] === "pan-tilt" && segments.length === 4
+      ) {
+        return await this.#cameraPanTilt(request, segments[2]!, response);
+      }
+      if (
+        request.method === "POST" &&
         segments[0] === "api" && segments[1] === "cameras" && segments[3] === "ai-tracking" && segments.length === 4
       ) {
         return await this.#cameraAiTracking(request, segments[2]!, response);
@@ -1378,6 +1384,19 @@ export class GatewayServer {
     } else {
       await move();
     }
+    return json(response, 200, { ok: true });
+  }
+
+  /** Nudge a pan/tilt camera one step; the provider owns session routing. */
+  async #cameraPanTilt(request: IncomingMessage, serial: string, response: ServerResponse): Promise<void> {
+    if (!this.state.hasCamera(serial)) return json(response, 404, { error: "Camera not found" });
+    const body = await readJson(request);
+    const direction = body.direction;
+    if (direction !== "left" && direction !== "right" && direction !== "up" && direction !== "down") {
+      throw new SyntaxError("Pan/tilt direction must be left, right, up or down");
+    }
+    if (!this.provider.panTiltCamera) return json(response, 501, { error: "Pan/tilt is unavailable" });
+    await this.provider.panTiltCamera(serial, direction);
     return json(response, 200, { ok: true });
   }
 
