@@ -1701,6 +1701,7 @@ export class EufyProvider implements CameraProvider, CaptchaProvider {
       catalogueStatus: profile ? "ready_to_test" : "recognised", firmware: null, hardwareVersion: null, firmwareSubVersion: null,
       firmwareUpdateAvailable: null, rssi: null, audioSettings: null, reportedSettings: profile ? { streamingQualityTier: values.quality, imageFlipped: null, statusLedEnabled: null, soundDetectionEnabled: null } : null,
       enabled: null, motionDetectionEnabled: null, guardMode: null, nightVisionMode: values.night,
+      panTiltControlSupported: false,
       nvrPanControlSupported: !!profile && (!profile.opticalZoom || view === 1),
       nvrOpticalZoomControlSupported: !!profile?.opticalZoom && view === 1,
       nvrViewOptions: profile?.views ?? [], nvrSelectedView: profile ? view : null,
