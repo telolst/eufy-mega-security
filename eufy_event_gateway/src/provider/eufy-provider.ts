@@ -4845,6 +4845,17 @@ export class EufyProvider implements CameraProvider, CaptchaProvider {
     return this.#queuePanControl(serial, "lens_trial", (session) => session.lensTrial(variant));
   }
 
+  /** Diagnostic: read the T8170 camera-info parameter list on a control session. */
+  async readCameraParams(serial: string): Promise<readonly { readonly param_type: number; readonly param_value: string | number | boolean }[]> {
+    const device = this.#devices.get(serial);
+    if (!device || device.model !== "T8170") throw new Error("Parameter reads are only available for the T8170");
+    let params: readonly { readonly param_type: number; readonly param_value: string | number | boolean }[] = [];
+    await this.#queuePanControl(serial, "camera_params", async (session) => {
+      params = await session.readCameraInfo();
+    });
+    return params;
+  }
+
   /** Serialize pan actions on an existing decoded viewer or a newly owned control session. */
   #queuePanControl(
     serial: string,

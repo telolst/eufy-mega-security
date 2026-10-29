@@ -1041,6 +1041,12 @@ export class GatewayServer {
         return await this.#cameraLensTrial(request, segments[2]!, response);
       }
       if (
+        request.method === "GET" &&
+        segments[0] === "api" && segments[1] === "cameras" && segments[3] === "params" && segments.length === 4
+      ) {
+        return await this.#cameraParams(segments[2]!, response);
+      }
+      if (
         request.method === "POST" &&
         segments[0] === "api" && segments[1] === "cameras" && segments[3] === "ai-tracking" && segments.length === 4
       ) {
@@ -1391,6 +1397,19 @@ export class GatewayServer {
       await move();
     }
     return json(response, 200, { ok: true });
+  }
+
+  /** Diagnostic: list camera-info parameters; strings are reduced to their length. */
+  async #cameraParams(serial: string, response: ServerResponse): Promise<void> {
+    if (!this.state.hasCamera(serial)) return json(response, 404, { error: "Camera not found" });
+    if (!this.provider.readCameraParams) return json(response, 501, { error: "Parameter reads are unavailable" });
+    const params = await this.provider.readCameraParams(serial);
+    return json(response, 200, {
+      params: params.map(({ param_type, param_value }) => ({
+        param_type,
+        param_value: typeof param_value === "string" ? `<text:${param_value.length}>` : param_value,
+      })),
+    });
   }
 
   /** Diagnostic: send one fixed lens/zoom candidate; never an arbitrary command. */
