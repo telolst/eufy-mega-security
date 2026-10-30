@@ -215,8 +215,6 @@ export interface CameraProvider {
   readCameraParams?(serial: string): Promise<readonly { readonly param_type: number; readonly param_value: string | number | boolean }[]>;
   /** Diagnostic: read one camera's cloud inventory parameters. */
   readCloudParams?(serial: string): Promise<readonly { readonly param_type: number; readonly param_value: unknown }[]>;
-  /** Diagnostic: read one camera's cloud inventory parameters. */
-  readCloudParams?(serial: string): Promise<readonly { readonly param_type: number; readonly param_value: unknown }[]>;
 
   /** Send the camera's physically verified AI-tracking action. */
   setCameraAiTracking(serial: string, enabled: boolean): Promise<void>;

@@ -4867,17 +4867,6 @@ export class EufyProvider implements CameraProvider, CaptchaProvider {
       ? [{ param_type: row.param_type, param_value: row.param_value }] : []);
   }
 
-  /** Diagnostic: read one camera's parameter list from a fresh cloud inventory. */
-  async readCloudParams(serial: string): Promise<readonly { readonly param_type: number; readonly param_value: unknown }[]> {
-    const inventory = await this.#client.inventory();
-    const rows = inventory.devices.filter((row) => row.device_sn === serial);
-    if (rows.length !== 1) throw new Error("Camera not found in cloud inventory");
-    const params = rows[0]!.params;
-    if (!params) throw new Error("Cloud inventory row carries no parameters");
-    return params.flatMap((row) => typeof row.param_type === "number"
-      ? [{ param_type: row.param_type, param_value: row.param_value }] : []);
-  }
-
   /** Serialize pan actions on an existing decoded viewer or a newly owned control session. */
   #queuePanControl(
     serial: string,

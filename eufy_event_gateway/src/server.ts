@@ -1053,12 +1053,6 @@ export class GatewayServer {
         return await this.#cameraCloudParams(segments[2]!, response);
       }
       if (
-        request.method === "GET" &&
-        segments[0] === "api" && segments[1] === "cameras" && segments[3] === "cloud-params" && segments.length === 4
-      ) {
-        return await this.#cameraCloudParams(segments[2]!, response);
-      }
-      if (
         request.method === "POST" &&
         segments[0] === "api" && segments[1] === "cameras" && segments[3] === "ai-tracking" && segments.length === 4
       ) {
@@ -1409,31 +1403,6 @@ export class GatewayServer {
       await move();
     }
     return json(response, 200, { ok: true });
-  }
-
-  /** Diagnostic: list cloud inventory parameters; text leaves are reduced to their length. */
-  async #cameraCloudParams(serial: string, response: ServerResponse): Promise<void> {
-    if (!this.state.hasCamera(serial)) return json(response, 404, { error: "Camera not found" });
-    if (!this.provider.readCloudParams) return json(response, 501, { error: "Cloud parameter reads are unavailable" });
-    const redact = (value: unknown): unknown => {
-      if (typeof value === "number" || typeof value === "boolean" || value === null) return value;
-      if (typeof value === "string") {
-        if (/^-?\d+(\.\d+)?$/.test(value)) return Number(value);
-        if (/^[[{]/.test(value)) {
-          try { return redact(JSON.parse(value)); } catch { /* not JSON */ }
-        }
-        return `<text:${value.length}>`;
-      }
-      if (Array.isArray(value)) return value.map(redact);
-      if (typeof value === "object") {
-        return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, item]) => [key, redact(item)]));
-      }
-      return "<other>";
-    };
-    const params = await this.provider.readCloudParams(serial);
-    return json(response, 200, {
-      params: params.map(({ param_type, param_value }) => ({ param_type, param_value: redact(param_value) })),
-    });
   }
 
   /** Diagnostic: list cloud inventory parameters; text leaves are reduced to their length. */
