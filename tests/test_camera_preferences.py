@@ -7,7 +7,7 @@ import importlib.util
 from pathlib import Path
 import unittest
 
-path = Path(__file__).parents[1] / "custom_components/eufy_event_gateway/preferences.py"
+path = Path(__file__).parents[1] / "custom_components/eufy_mega_dev/preferences.py"
 spec = importlib.util.spec_from_file_location("preferences", path)
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)

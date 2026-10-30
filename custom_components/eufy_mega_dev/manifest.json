@@ -1,6 +1,6 @@
 {
-  "domain": "eufy_event_gateway",
-  "name": "Eufy Mega Security",
+  "domain": "eufy_mega_dev",
+  "name": "Eufy Mega Security (Dev)",
   "after_dependencies": [
     "stream",
     "media_source"
@@ -16,5 +16,5 @@
   "integration_type": "hub",
   "iot_class": "cloud_push",
   "issue_tracker": "https://github.com/mscodemonkey/eufy-mega-security/issues",
-  "version": "0.1.209-ptz1"
+  "version": "0.1.209-ptz1-dev"
 }

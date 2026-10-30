@@ -14,7 +14,7 @@ import unittest
 
 
 ROOT = Path(__file__).parents[1]
-INTEGRATION = ROOT / "custom_components/eufy_event_gateway"
+INTEGRATION = ROOT / "custom_components/eufy_mega_dev"
 PLATFORM_FILES = (
     "alarm_control_panel.py",
     "binary_sensor.py",

@@ -3,7 +3,7 @@ capture_snapshot:
   description: Wake a supported Eufy camera, wait for a new frame, and save it to a Home Assistant allowlisted path.
   target:
     entity:
-      integration: eufy_event_gateway
+      integration: eufy_mega_dev
       domain: camera
   fields:
     filename:
@@ -19,7 +19,7 @@ record_clip:
   description: Wake a supported Eufy camera and record an on-demand video clip.
   target:
     entity:
-      integration: eufy_event_gateway
+      integration: eufy_mega_dev
       domain: camera
   fields:
     filename:
@@ -46,7 +46,7 @@ get_stream_url:
   description: Start Home Assistant's HLS stream for a supported Eufy camera and return a temporary URL for an automation or local player.
   target:
     entity:
-      integration: eufy_event_gateway
+      integration: eufy_mega_dev
       domain: camera
 
 play_audio:
@@ -54,7 +54,7 @@ play_audio:
   description: Play an AAC-LC 16 kHz mono file, up to 20 seconds long, through a supported camera speaker.
   target:
     entity:
-      integration: eufy_event_gateway
+      integration: eufy_mega_dev
       domain: camera
   fields:
     filename:
@@ -70,7 +70,7 @@ list_cloud_recordings:
   description: Read activity times for one day. Returns metadata only, without playable media.
   target:
     entity:
-      integration: eufy_event_gateway
+      integration: eufy_mega_dev
       domain: camera
   fields:
     day:
@@ -85,7 +85,7 @@ get_cloud_recording_dates:
   description: Read day hints only. Requires experimental_cloud_recordings on the gateway. Hints cannot play a clip.
   target:
     entity:
-      integration: eufy_event_gateway
+      integration: eufy_mega_dev
       domain: camera
   fields:
     month:

@@ -36,7 +36,7 @@ if [ ! -s "$token_file" ]; then
 fi
 export EUFY_GATEWAY_API_TOKEN="$(cat "$token_file")"
 export EUFY_GATEWAY_HOST=0.0.0.0
-export EUFY_GATEWAY_PORT=3218
+export EUFY_GATEWAY_PORT=3219
 export EUFY_GATEWAY_DATA_DIR=/data/runtime
 export EUFY_GATEWAY_RUN_ID="${EUFY_GATEWAY_RUN_ID:-$(node -e 'process.stdout.write(require("node:crypto").randomUUID().slice(0, 8))')}"
 
@@ -63,7 +63,7 @@ graceful_shutdown() {
 trap graceful_shutdown INT TERM
 
 attempt=0
-until curl -fsS http://127.0.0.1:3218/live >/dev/null 2>&1; do
+until curl -fsS http://127.0.0.1:3219/live >/dev/null 2>&1; do
   attempt=$((attempt + 1))
   if [ "$attempt" -ge 60 ] || ! kill -0 "$gateway_pid" 2>/dev/null; then
     launcher_error gateway_start_failed "Gateway did not become healthy"
@@ -77,11 +77,11 @@ if [ -n "${SUPERVISOR_TOKEN:-}" ]; then
   gateway_host="$(hostname)"
   discovery_config="$(jq -cn \
     --arg host "$gateway_host" \
-    --argjson port 3218 \
+    --argjson port 3219 \
     --arg api_token "$EUFY_GATEWAY_API_TOKEN" \
     '{host:$host, port:$port, api_token:$api_token}')"
   discovery_payload="$(jq -cn \
-    --arg service eufy_event_gateway \
+    --arg service eufy_mega_dev \
     --argjson config "$discovery_config" \
     '{service:$service, config:$config}')"
 

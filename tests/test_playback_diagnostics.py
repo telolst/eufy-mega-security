@@ -16,7 +16,7 @@ from unittest.mock import AsyncMock, Mock
 
 
 ROOT = Path(__file__).parents[1]
-SOURCE = ROOT / "custom_components/eufy_event_gateway"
+SOURCE = ROOT / "custom_components/eufy_mega_dev"
 SPEC = importlib.util.spec_from_file_location("playback_diagnostics", SOURCE / "playback_diagnostics.py")
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)

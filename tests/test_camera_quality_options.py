@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 import unittest
 
-SOURCE = Path(__file__).parents[1] / 'custom_components/eufy_event_gateway/select.py'
+SOURCE = Path(__file__).parents[1] / 'custom_components/eufy_mega_dev/select.py'
 
 
 class StreamingQualityOptionsTest(unittest.TestCase):

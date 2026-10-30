@@ -22,8 +22,8 @@ from unittest.mock import AsyncMock, patch
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 ROOT = Path(__file__).parents[1]
-CAMERA = ROOT / "custom_components/eufy_event_gateway/camera.py"
-CLIENT = ROOT / "custom_components/eufy_event_gateway/client.py"
+CAMERA = ROOT / "custom_components/eufy_mega_dev/camera.py"
+CLIENT = ROOT / "custom_components/eufy_mega_dev/client.py"
 
 
 class SyntheticClientError(Exception):
@@ -252,7 +252,7 @@ class CloudMetadataTest(unittest.IsolatedAsyncioTestCase):
         setup = next(n for n in self.tree.body if isinstance(n, ast.AsyncFunctionDef) and n.name == "async_setup_entry")
         services = [n for n in ast.walk(setup) if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute) and n.func.attr == "async_register_entity_service"]
         self.assertEqual([n.args[0].value for n in services], ["capture_snapshot", "play_audio", "record_clip", "get_stream_url", "list_cloud_recordings", "get_cloud_recording_dates"])
-        yaml = (ROOT / "custom_components/eufy_event_gateway/services.yaml").read_text()
+        yaml = (ROOT / "custom_components/eufy_mega_dev/services.yaml").read_text()
         for service, field in [(services[-2], "day"), (services[-1], "month")]:
             self.assertEqual(service.keywords[0].arg, "supports_response")
             self.assertEqual(ast.unparse(service.keywords[0].value), "SupportsResponse.ONLY")

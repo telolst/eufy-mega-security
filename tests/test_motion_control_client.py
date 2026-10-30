@@ -11,7 +11,7 @@ from types import SimpleNamespace
 import unittest
 from urllib.parse import quote
 
-SOURCE = Path(__file__).parents[1] / "custom_components/eufy_event_gateway/client.py"
+SOURCE = Path(__file__).parents[1] / "custom_components/eufy_mega_dev/client.py"
 
 
 class MotionClientTest(unittest.IsolatedAsyncioTestCase):

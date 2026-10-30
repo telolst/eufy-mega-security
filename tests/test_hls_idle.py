@@ -14,7 +14,7 @@ import unittest
 from unittest.mock import AsyncMock, Mock
 
 
-SOURCE = Path(__file__).parents[1] / "custom_components/eufy_event_gateway/camera.py"
+SOURCE = Path(__file__).parents[1] / "custom_components/eufy_mega_dev/camera.py"
 
 
 class HlsIdleTest(unittest.IsolatedAsyncioTestCase):

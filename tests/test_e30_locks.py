@@ -13,7 +13,7 @@ from typing import Any
 import unittest
 from unittest.mock import AsyncMock
 
-ROOT = Path(__file__).parents[1] / "custom_components/eufy_event_gateway"
+ROOT = Path(__file__).parents[1] / "custom_components/eufy_mega_dev"
 
 
 def method(file: str, owner: str, name: str, namespace: dict):

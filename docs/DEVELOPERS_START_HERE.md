@@ -9,7 +9,7 @@ Read this document before changing authentication, camera discovery, snapshots, 
 Eufy Mega Security is two programs:
 
 1. `eufy_event_gateway` is a standalone Node.js service. It talks to Eufy's cloud and camera protocols, owns the Eufy account session, receives push notifications, downloads and decodes event images, and opens live camera sessions.
-2. `custom_components/eufy_event_gateway` is a small Home Assistant integration. It talks to the gateway's authenticated local HTTP and Server-Sent Events API and turns the gateway's stable JSON into Home Assistant entities.
+2. `custom_components/eufy_mega_dev` is a small Home Assistant integration. It talks to the gateway's authenticated local HTTP and Server-Sent Events API and turns the gateway's stable JSON into Home Assistant entities.
 
 The gateway knows Eufy. Home Assistant knows Home Assistant. That boundary is the most important design decision in the project.
 
@@ -100,15 +100,15 @@ Eufy Mega HTTPS APIs
 
 ### Home Assistant code
 
-- `custom_components/eufy_event_gateway/client.py`: authenticated HTTP/SSE calls only.
-- `custom_components/eufy_event_gateway/coordinator.py`: first poll, SSE reconnect/backoff, and sixty-second recovery polling.
-- `custom_components/eufy_event_gateway/entity.py`: serial-based device identity and availability.
-- `custom_components/eufy_event_gateway/camera.py`: retained image, short-lived stream URL, fresh snapshot action, and clip action.
-- `custom_components/eufy_event_gateway/binary_sensor.py`: motion and person states.
-- `custom_components/eufy_event_gateway/alarm_control_panel.py`: confirmed Away, Home, and Disarmed control for HomeBase 3.
-- `custom_components/eufy_event_gateway/select.py` and `number.py`: HomeBase guard mode, alarm tone, and volume controls.
-- `custom_components/eufy_event_gateway/sensor.py`: last recognized person, effective HomeBase mode, and storage state.
-- `custom_components/eufy_event_gateway/config_flow.py`: manual and Supervisor-discovered gateway connections.
+- `custom_components/eufy_mega_dev/client.py`: authenticated HTTP/SSE calls only.
+- `custom_components/eufy_mega_dev/coordinator.py`: first poll, SSE reconnect/backoff, and sixty-second recovery polling.
+- `custom_components/eufy_mega_dev/entity.py`: serial-based device identity and availability.
+- `custom_components/eufy_mega_dev/camera.py`: retained image, short-lived stream URL, fresh snapshot action, and clip action.
+- `custom_components/eufy_mega_dev/binary_sensor.py`: motion and person states.
+- `custom_components/eufy_mega_dev/alarm_control_panel.py`: confirmed Away, Home, and Disarmed control for HomeBase 3.
+- `custom_components/eufy_mega_dev/select.py` and `number.py`: HomeBase guard mode, alarm tone, and volume controls.
+- `custom_components/eufy_mega_dev/sensor.py`: last recognized person, effective HomeBase mode, and storage state.
+- `custom_components/eufy_mega_dev/config_flow.py`: manual and Supervisor-discovered gateway connections.
 
 ### Documentation and delivery
 

@@ -1,5 +1,5 @@
 {
-  "title": "Eufy Mega Security",
+  "title": "Eufy Mega Security (Dev)",
   "entity": {
     "light": {
       "manual_floodlight": {
@@ -403,7 +403,7 @@
           "api_token": "API nøgle"
         },
         "data_description": {
-          "url": "Eksempel, http://192.168.1.20:3218",
+          "url": "Eksempel, http://192.168.1.20:3219",
           "api_token": "Lad være tom hvis gateway er begrænset til samme vært."
         }
       },
@@ -415,7 +415,7 @@
           "api_token": "API nøgle"
         },
         "data_description": {
-          "url": "For den lokale app, brug adressen leveret af Supervisor discovery. Manuelle installationer bruger normalt http://127.0.0.1:3218.",
+          "url": "For den lokale app, brug adressen leveret af Supervisor discovery. Manuelle installationer bruger normalt http://127.0.0.1:3219.",
           "api_token": "Brug den samme nøgle som er konfigureteret i Eufy Mega Security appen."
         }
       },

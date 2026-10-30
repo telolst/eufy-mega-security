@@ -1,6 +1,6 @@
-name: Eufy Mega Security
-version: "0.1.209-ptz6"
-slug: eufy_event_gateway
+name: Eufy Mega Security (Dev)
+version: "0.1.209-ptz6-dev"
+slug: eufy_mega_dev
 description: Event-first Eufy camera bridge for Home Assistant
 url: https://github.com/mscodemonkey/eufy-mega-security
 startup: application
@@ -10,17 +10,17 @@ arch:
   - aarch64
   - amd64
 ports:
-  3218/tcp: null
+  3219/tcp: null
 ports_description:
-  3218/tcp: Gateway API
-watchdog: http://[HOST]:[PORT:3218]/live
+  3219/tcp: Gateway API
+watchdog: http://[HOST]:[PORT:3219]/live
 ingress: true
-ingress_port: 3218
+ingress_port: 3219
 panel_icon: mdi:cctv
 host_network: true
 hassio_api: true
 discovery:
-  - eufy_event_gateway
+  - eufy_mega_dev
 options:
   username: ""
   password: ""

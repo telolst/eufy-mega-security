@@ -20,7 +20,7 @@ if (action !== "validate" && action !== "check" && action !== "generate") {
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const integration = resolve(
   repositoryRoot,
-  "custom_components/eufy_event_gateway",
+  "custom_components/eufy_mega_dev",
 );
 const sourceDirectory = resolve(integration, "translation_sources");
 const outputDirectory = resolve(integration, "translations");

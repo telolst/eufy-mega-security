@@ -134,7 +134,7 @@ async function write(path, body) {
   await writeFile(target, body);
 }
 await cp(join(root, 'assets/products'), join(staged, 'assets/products'), { recursive: true });
-await cp(join(root, '../custom_components/eufy_event_gateway/brand/icon.png'), join(staged, 'assets/icon.png'));
+await cp(join(root, '../custom_components/eufy_mega_dev/brand/icon.png'), join(staged, 'assets/icon.png'));
 for (const file of ['styles.css', 'app.mjs', 'model.mjs', 'support.mjs']) await cp(join(root, 'src', file), join(staged, 'assets', file));
 await write('index.html', indexPage());
 for (const device of devices) await write(`devices/${device.id}/index.html`, devicePage(device));

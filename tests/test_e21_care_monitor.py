@@ -15,7 +15,7 @@ import unittest
 
 SOURCE = (
     Path(__file__).parents[1]
-    / "custom_components/eufy_event_gateway/binary_sensor.py"
+    / "custom_components/eufy_mega_dev/binary_sensor.py"
 )
 
 

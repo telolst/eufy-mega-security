@@ -9,7 +9,7 @@ If this is your first day on the project, read [Developers start here](docs/DEVE
 The repository contains two cooperating pieces:
 
 - `eufy_event_gateway` is the Eufy client and media gateway. It owns Mega authentication, device discovery, push events, snapshots, and native camera transport.
-- `custom_components/eufy_event_gateway` is the Home Assistant integration. It talks to the gateway's authenticated HTTP and SSE API and turns the returned state into entities.
+- `custom_components/eufy_mega_dev` is the Home Assistant integration. It talks to the gateway's authenticated HTTP and SSE API and turns the returned state into entities.
 
 Keep Eufy protocol work in the gateway. The Home Assistant integration should not contain Eufy credentials, Eufy cryptography, device polling logic, or a second copy of the camera protocol.
 
@@ -56,7 +56,7 @@ The simulated provider gives the HTTP API, SSE events, entity state, and stream 
 ## Translating the Home Assistant integration
 
 Human-edited translations live in
-`custom_components/eufy_event_gateway/translation_sources/`. Home Assistant's
+`custom_components/eufy_mega_dev/translation_sources/`. Home Assistant's
 required JSON files are generated from them. To add a language:
 
 1. Copy `en.yaml` to a file named with the language's BCP 47 code. For

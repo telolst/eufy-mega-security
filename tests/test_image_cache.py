@@ -15,7 +15,7 @@ from types import ModuleType
 import unittest
 
 
-ROOT = Path(__file__).parents[1] / "custom_components/eufy_event_gateway"
+ROOT = Path(__file__).parents[1] / "custom_components/eufy_mega_dev"
 CLIENT = ModuleType("image_cache_test.client")
 CLIENT.GatewayClientError = type("GatewayClientError", (Exception,), {})
 sys.modules["image_cache_test.client"] = CLIENT

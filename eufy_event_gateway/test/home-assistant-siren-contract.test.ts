@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 
 const integrationPath = resolve(
   dirname(fileURLToPath(import.meta.url)),
-  "../../custom_components/eufy_event_gateway/siren.py",
+  "../../custom_components/eufy_mega_dev/siren.py",
 );
 
 test("camera and HomeBase sirens advertise duration support", async () => {

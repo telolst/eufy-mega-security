@@ -12,7 +12,7 @@ from pathlib import Path
 import unittest
 
 
-CAMERA_SOURCE = Path(__file__).parents[1] / "custom_components/eufy_event_gateway/camera.py"
+CAMERA_SOURCE = Path(__file__).parents[1] / "custom_components/eufy_mega_dev/camera.py"
 
 
 class EventImageCameraContractTest(unittest.TestCase):

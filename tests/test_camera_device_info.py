@@ -18,7 +18,7 @@ class CameraDeviceInfoTest(unittest.TestCase):
 
     def test_device_versions_are_optional_and_camera_owned(self) -> None:
         """Publish reported versions while retaining the existing stable identity."""
-        source = Path(__file__).parents[1] / "custom_components/eufy_event_gateway/entity.py"
+        source = Path(__file__).parents[1] / "custom_components/eufy_mega_dev/entity.py"
         tree = ast.parse(source.read_text())
         entity = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "EufyGatewayEntity")
         getter = next(node for node in entity.body if isinstance(node, ast.FunctionDef) and node.name == "device_info")

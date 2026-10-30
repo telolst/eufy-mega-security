@@ -6,7 +6,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { waitingImage } from "../src/mega/waiting-image.ts";
 
-const asset = new URL("../../custom_components/eufy_event_gateway/waiting-image.jpg", import.meta.url);
+const asset = new URL("../../custom_components/eufy_mega_dev/waiting-image.jpg", import.meta.url);
 const expected = waitingImage();
 if (process.argv.includes("--check")) {
   if (!(await readFile(asset)).equals(expected)) {

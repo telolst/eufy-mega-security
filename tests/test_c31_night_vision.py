@@ -18,7 +18,7 @@ class C31NightVisionTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_discovery_registry_withdrawal_and_failed_write(self) -> None:
         """Retain the existing select ID and surface gateway write failures."""
-        source = Path(__file__).parents[1] / "custom_components/eufy_event_gateway/select.py"
+        source = Path(__file__).parents[1] / "custom_components/eufy_mega_dev/select.py"
         tree = ast.parse(source.read_text())
         names = {"async_setup_entry", "_night_vision_modes", "EufyNightVisionSelect"}
         nodes = [ast.ImportFrom(module="__future__", names=[ast.alias(name="annotations")], level=0)]

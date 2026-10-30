@@ -18,7 +18,7 @@ test("Home Assistant creates only the storage media advertised by the gateway", 
     "utf8",
   );
   const sensor = await readFile(
-    resolve(repositoryPath, "custom_components/eufy_event_gateway/sensor.py"),
+    resolve(repositoryPath, "custom_components/eufy_mega_dev/sensor.py"),
     "utf8",
   );
 

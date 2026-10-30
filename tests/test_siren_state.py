@@ -12,7 +12,7 @@ from types import SimpleNamespace
 import unittest
 
 
-SOURCE = Path(__file__).parents[1] / "custom_components/eufy_event_gateway/siren.py"
+SOURCE = Path(__file__).parents[1] / "custom_components/eufy_mega_dev/siren.py"
 
 
 def siren_state(class_name: str, station: dict) -> bool | None:

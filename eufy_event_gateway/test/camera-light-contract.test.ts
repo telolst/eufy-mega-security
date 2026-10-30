@@ -15,10 +15,10 @@ const repositoryPath = resolve(dirname(fileURLToPath(import.meta.url)), "../..")
 
 test("gateway and Home Assistant share one stateless light contract", async () => {
   const server = await readFile(resolve(repositoryPath, "eufy_event_gateway/src/server.ts"), "utf8");
-  const client = await readFile(resolve(repositoryPath, "custom_components/eufy_event_gateway/client.py"), "utf8");
-  const button = await readFile(resolve(repositoryPath, "custom_components/eufy_event_gateway/button.py"), "utf8");
+  const client = await readFile(resolve(repositoryPath, "custom_components/eufy_mega_dev/client.py"), "utf8");
+  const button = await readFile(resolve(repositoryPath, "custom_components/eufy_mega_dev/button.py"), "utf8");
   const strings = JSON.parse(
-    await readFile(resolve(repositoryPath, "custom_components/eufy_event_gateway/strings.json"), "utf8"),
+    await readFile(resolve(repositoryPath, "custom_components/eufy_mega_dev/strings.json"), "utf8"),
   ) as { entity: { button: Record<string, unknown> } };
 
   assert.match(server, /segments\[3\] === "light"/);

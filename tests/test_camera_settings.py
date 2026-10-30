@@ -134,7 +134,7 @@ class CameraSettingsTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_optional_controls_discover_once_after_late_capability_updates(self):
         """Older gateways create nothing and later admitted controls appear once."""
-        root = Path(__file__).parents[1] / "custom_components/eufy_event_gateway"
+        root = Path(__file__).parents[1] / "custom_components/eufy_mega_dev"
         for filename in ("number.py", "switch.py"):
             tree = ast.parse((root / filename).read_text())
             setup = next(node for node in tree.body if isinstance(node, ast.AsyncFunctionDef) and node.name == "async_setup_entry")

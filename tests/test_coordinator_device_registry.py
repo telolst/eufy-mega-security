@@ -34,14 +34,14 @@ def _load_coordinator(registry: object) -> type:
     update_coordinator = ModuleType("homeassistant.helpers.update_coordinator")
     update_coordinator.DataUpdateCoordinator = _DataUpdateCoordinator
     update_coordinator.UpdateFailed = RuntimeError
-    package = ModuleType("custom_components.eufy_event_gateway")
+    package = ModuleType("custom_components.eufy_mega_dev")
     package.__path__ = []
-    client = ModuleType("custom_components.eufy_event_gateway.client")
+    client = ModuleType("custom_components.eufy_mega_dev.client")
     client.GatewayClient = object
     client.GatewayClientError = RuntimeError
-    const = ModuleType("custom_components.eufy_event_gateway.const")
+    const = ModuleType("custom_components.eufy_mega_dev.const")
     const.DOMAIN = "eufy_event_gateway"
-    image_cache = ModuleType("custom_components.eufy_event_gateway.image_cache")
+    image_cache = ModuleType("custom_components.eufy_mega_dev.image_cache")
     image_cache.CameraImageCache = object
     modules = {
         "homeassistant": homeassistant,
@@ -49,17 +49,17 @@ def _load_coordinator(registry: object) -> type:
         "homeassistant.helpers": helpers,
         "homeassistant.helpers.device_registry": device_registry,
         "homeassistant.helpers.update_coordinator": update_coordinator,
-        "custom_components.eufy_event_gateway": package,
-        "custom_components.eufy_event_gateway.client": client,
-        "custom_components.eufy_event_gateway.const": const,
-        "custom_components.eufy_event_gateway.image_cache": image_cache,
+        "custom_components.eufy_mega_dev": package,
+        "custom_components.eufy_mega_dev.client": client,
+        "custom_components.eufy_mega_dev.const": const,
+        "custom_components.eufy_mega_dev.image_cache": image_cache,
     }
     previous = {name: sys.modules.get(name) for name in modules}
     sys.modules.update(modules)
     try:
-        path = Path(__file__).parents[1] / "custom_components/eufy_event_gateway/coordinator.py"
+        path = Path(__file__).parents[1] / "custom_components/eufy_mega_dev/coordinator.py"
         spec = importlib.util.spec_from_file_location(
-            "custom_components.eufy_event_gateway.coordinator_registry_test", path
+            "custom_components.eufy_mega_dev.coordinator_registry_test", path
         )
         assert spec is not None and spec.loader is not None
         module = importlib.util.module_from_spec(spec)

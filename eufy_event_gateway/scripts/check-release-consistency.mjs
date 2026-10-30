@@ -81,7 +81,7 @@ function assertChangelogVersion(changelog, version, name) {
 const packageJson = JSON.parse(await readRepositoryFile("package.json"));
 const packageLock = JSON.parse(await readRepositoryFile("package-lock.json"));
 const configYaml = await readRepositoryFile("config.yaml");
-const manifest = JSON.parse(await readFile(resolve(gatewayDirectory, "..", "custom_components/eufy_event_gateway/manifest.json"), "utf8"));
+const manifest = JSON.parse(await readFile(resolve(gatewayDirectory, "..", "custom_components/eufy_mega_dev/manifest.json"), "utf8"));
 const runScript = await readRepositoryFile("run.sh");
 const appChangelog = await readRepositoryFile("CHANGELOG.md");
 const repositoryChangelog = await readRepositoryFile("../CHANGELOG.md");

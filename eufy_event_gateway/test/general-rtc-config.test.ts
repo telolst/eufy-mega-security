@@ -43,7 +43,7 @@ test("app locales contain the owner-account description and integration sources 
     assert.ok(option); assert.equal(typeof option.name, "string"); assert.equal(typeof option.description, "string");
     if (locale === "en.yaml") for (const phrase of ["owner", "guest", "PIN", "Eufy", "unconfirmed", "Off by default"]) assert.ok(option.description.includes(phrase));
   }
-  const integration = resolve(root, "custom_components/eufy_event_gateway");
+  const integration = resolve(root, "custom_components/eufy_mega_dev");
   for (const path of ["strings.json", ...(await readdir(resolve(integration, "translation_sources")))
     .filter(name => name.endsWith(".yaml")).map(name => `translation_sources/${name}`)]) {
     assert.doesNotMatch(await readFile(resolve(integration, path), "utf8"), /experimental_general_rtc|experimental_doorbell_rtc/);

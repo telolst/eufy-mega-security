@@ -12,7 +12,7 @@ import unicodedata
 import unittest
 
 
-ROOT = Path(__file__).parents[1] / "custom_components/eufy_event_gateway"
+ROOT = Path(__file__).parents[1] / "custom_components/eufy_mega_dev"
 
 
 class GuardModeOptionsTest(unittest.TestCase):

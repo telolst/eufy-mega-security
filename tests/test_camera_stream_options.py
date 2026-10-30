@@ -13,7 +13,7 @@ import unittest
 from unittest.mock import AsyncMock, Mock
 
 
-CAMERA_SOURCE = Path(__file__).parents[1] / "custom_components/eufy_event_gateway/camera.py"
+CAMERA_SOURCE = Path(__file__).parents[1] / "custom_components/eufy_mega_dev/camera.py"
 
 
 class CameraStreamOptionsTest(unittest.TestCase):

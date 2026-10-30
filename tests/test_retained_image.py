@@ -9,7 +9,7 @@ from pathlib import Path
 import unittest
 
 
-ROOT = Path(__file__).parents[1] / "custom_components/eufy_event_gateway"
+ROOT = Path(__file__).parents[1] / "custom_components/eufy_mega_dev"
 
 
 class RetainedImageContractTest(unittest.TestCase):

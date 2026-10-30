@@ -69,7 +69,7 @@ class EufyGatewayConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 await self.async_set_unique_id(url.lower())
                 self._abort_if_unique_id_configured()
                 return self.async_create_entry(
-                    title="Eufy Mega Security", data={**user_input, CONF_URL: url}
+                    title="Eufy Mega Security (Dev)", data={**user_input, CONF_URL: url}
                 )
 
         return self.async_show_form(
@@ -155,7 +155,7 @@ class EufyGatewayConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             assert self._discovered_data is not None
             return self.async_create_entry(
-                title="Eufy Mega Security", data=self._discovered_data
+                title="Eufy Mega Security (Dev)", data=self._discovered_data
             )
         return self.async_show_form(step_id="hassio_confirm")
 
@@ -166,7 +166,7 @@ def _schema(defaults: dict[str, Any] | None) -> vol.Schema:
     return vol.Schema(
         {
             vol.Required(
-                CONF_URL, default=values.get(CONF_URL, "http://127.0.0.1:3218")
+                CONF_URL, default=values.get(CONF_URL, "http://127.0.0.1:3219")
             ): str,
             vol.Optional(
                 CONF_API_TOKEN, default=values.get(CONF_API_TOKEN, "")

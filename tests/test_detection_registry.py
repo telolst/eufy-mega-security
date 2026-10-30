@@ -67,7 +67,7 @@ class DetectionRegistryTest(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self) -> None:
         """Load real functions with test-local, non-imported HA boundaries."""
-        source = Path(__file__).parents[1] / "custom_components/eufy_event_gateway/binary_sensor.py"
+        source = Path(__file__).parents[1] / "custom_components/eufy_mega_dev/binary_sensor.py"
         tree = ast.parse(source.read_text())
         names = {"sync_detection_registry", "async_setup_entry"}
         nodes = [ast.ImportFrom(module="__future__", names=[ast.alias(name="annotations")], level=0)]

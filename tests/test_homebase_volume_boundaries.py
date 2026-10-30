@@ -13,7 +13,7 @@ ROOT = Path(__file__).parents[1]
 
 def test_homebase_volume_entities_start_at_one() -> None:
     """Keep the Home Assistant controls within the hardware-confirmed range."""
-    source = (ROOT / "custom_components/eufy_event_gateway/number.py").read_text()
+    source = (ROOT / "custom_components/eufy_mega_dev/number.py").read_text()
 
     assert "_attr_native_min_value = 1" in source
     assert "_attr_native_max_value = 26" in source

@@ -15,7 +15,7 @@ class NightVisionModesTest(unittest.TestCase):
 
     def test_solocam_modes_keep_their_wire_values(self) -> None:
         """Retain value three and its translated option key alongside older labels."""
-        source = Path(__file__).parents[1] / "custom_components/eufy_event_gateway/select.py"
+        source = Path(__file__).parents[1] / "custom_components/eufy_mega_dev/select.py"
         tree = ast.parse(source.read_text())
         nodes = [ast.ImportFrom(module="__future__", names=[ast.alias(name="annotations")], level=0)]
         nodes += [node for node in tree.body if (

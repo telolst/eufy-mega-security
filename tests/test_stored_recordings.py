@@ -17,7 +17,7 @@ from unittest.mock import AsyncMock, Mock
 from urllib.parse import quote
 
 
-SOURCE = Path(__file__).parents[1] / "custom_components/eufy_event_gateway/media_source.py"
+SOURCE = Path(__file__).parents[1] / "custom_components/eufy_mega_dev/media_source.py"
 DOMAIN = "eufy_event_gateway"
 
 

@@ -13,7 +13,7 @@ from types import SimpleNamespace
 import unittest
 
 
-ROOT = Path(__file__).parents[1] / "custom_components/eufy_event_gateway"
+ROOT = Path(__file__).parents[1] / "custom_components/eufy_mega_dev"
 
 
 def load_function(filename: str, name: str, namespace: dict, class_name: str | None = None):

@@ -13,7 +13,7 @@ import unittest
 from unittest.mock import AsyncMock
 from urllib.parse import quote, urlsplit, unquote, parse_qsl
 
-ROOT = Path(__file__).parents[1] / "custom_components/eufy_event_gateway"
+ROOT = Path(__file__).parents[1] / "custom_components/eufy_mega_dev"
 
 
 class NativeStreamTest(unittest.IsolatedAsyncioTestCase):

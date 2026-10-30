@@ -14,7 +14,7 @@ import unittest
 from unittest.mock import AsyncMock
 
 
-SOURCE = Path(__file__).parents[1] / "custom_components/eufy_event_gateway/__init__.py"
+SOURCE = Path(__file__).parents[1] / "custom_components/eufy_mega_dev/__init__.py"
 
 
 class DeviceRemovalTest(unittest.IsolatedAsyncioTestCase):

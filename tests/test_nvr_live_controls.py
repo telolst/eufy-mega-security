@@ -10,7 +10,7 @@ from pathlib import Path
 import unittest
 from typing import Any
 
-ROOT = Path(__file__).parents[1] / "custom_components/eufy_event_gateway"
+ROOT = Path(__file__).parents[1] / "custom_components/eufy_mega_dev"
 
 
 class NvrUiTest(unittest.TestCase):

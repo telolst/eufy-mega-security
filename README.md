@@ -9,7 +9,7 @@ The project is maintained as an open-source gateway and Home Assistant integrati
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/mscodemonkey)
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/mscodemonkey/eufy-mega-security/main/custom_components/eufy_event_gateway/brand/icon.png" width="128" height="128" alt="Eufy Mega Security icon">
+  <img src="https://raw.githubusercontent.com/mscodemonkey/eufy-mega-security/main/custom_components/eufy_mega_dev/brand/icon.png" width="128" height="128" alt="Eufy Mega Security icon">
 </p>
 
 Reliable, event-first Home Assistant support for Eufy cameras that do not provide a permanent RTSP stream.
@@ -232,7 +232,7 @@ restarts the gateway; it does not reload the integration running inside Home
 Assistant. If a release updates both parts, update the integration in HACS and
 the app separately, then restart Home Assistant.
 
-If you do not use HACS, copy `custom_components/eufy_event_gateway` into `/config/custom_components/eufy_event_gateway` and restart Home Assistant.
+If you do not use HACS, copy `custom_components/eufy_mega_dev` into `/config/custom_components/eufy_mega_dev` and restart Home Assistant.
 
 ## Run with Home Assistant Container
 
@@ -411,7 +411,7 @@ You will need a free GitHub account and Git installed.
    For example, Danish is `da.yaml` and Dutch is `nl.yaml`:
 
    ```sh
-   cp custom_components/eufy_event_gateway/translation_sources/en.yaml custom_components/eufy_event_gateway/translation_sources/da.yaml
+   cp custom_components/eufy_mega_dev/translation_sources/en.yaml custom_components/eufy_mega_dev/translation_sources/da.yaml
    ```
 
 4. Open the new YAML file in a text editor and translate only the text values.
@@ -419,7 +419,7 @@ You will need a free GitHub account and Git installed.
 5. Commit and push that one YAML file:
 
    ```sh
-   git add custom_components/eufy_event_gateway/translation_sources/da.yaml
+   git add custom_components/eufy_mega_dev/translation_sources/da.yaml
    git commit -m "Add Danish translation"
    git push -u origin add-language-translation
    ```

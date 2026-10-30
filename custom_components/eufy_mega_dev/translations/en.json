@@ -1,5 +1,5 @@
 {
-  "title": "Eufy Mega Security",
+  "title": "Eufy Mega Security (Dev)",
   "entity": {
     "light": {
       "manual_floodlight": {
@@ -415,7 +415,7 @@
           "api_token": "API token"
         },
         "data_description": {
-          "url": "For example, http://192.168.1.20:3218",
+          "url": "For example, http://192.168.1.20:3219",
           "api_token": "Leave blank while the gateway is restricted to the same host."
         }
       },
@@ -427,7 +427,7 @@
           "api_token": "API token"
         },
         "data_description": {
-          "url": "For the local app, use the address supplied by Supervisor discovery. Manual installs usually use http://127.0.0.1:3218.",
+          "url": "For the local app, use the address supplied by Supervisor discovery. Manual installs usually use http://127.0.0.1:3219.",
           "api_token": "Use the same token configured in the Eufy Mega Security app."
         }
       },
