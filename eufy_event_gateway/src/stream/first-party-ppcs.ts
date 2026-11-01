@@ -2467,8 +2467,34 @@ export class FirstPartyPpcsSession {
     return parseCameraPresetPositions(payload);
   }
 
+  /**
+   * Set the T8170 digital zoom factor on the running stream. The camera expects
+   * command 6203 inside a level-two protected 1350 transfer envelope; the 1700
+   * control envelope is acknowledged but ignored. Each new live view starts at 1x.
+   */
+  async zoom(level: number): Promise<void> {
+    if (this.#alarmRead) throw new Error("Alarm state read owns this session");
+    if (this.#options.purpose !== "control" && !this.#allowsViewerPanControl(6203)) throw new Error("Camera zoom requires a control session");
+    if (!this.#remote) throw new Error("Camera zoom session is not connected");
+    if (this.#options.cameraModel !== "T8170" || this.#options.homeBaseAttached || this.#options.channel !== 0) {
+      throw new Error("Camera zoom requires the standalone T8170 channel-zero route");
+    }
+    if (!this.#options.accountId) throw new Error("Camera zoom requires an owning account");
+    if (!Number.isFinite(level) || level < 1 || level > 12 || !Number.isInteger(level * 2)) throw new Error("Unsupported zoom level");
+    await this.#waitForLevel2Key();
+    const value = { account_id: this.#options.accountId, cmd: 6203, mChannel: 0, mValue3: 0,
+      payload: { x: 0, y: 0, w: 0, h: 0, offset: false, orgZoom: 0, dstZoom: level }, transaction: `${Date.now()}` };
+    // Absolute writes tolerate retransmission, as with the other native 1350 preferences.
+    for (let transmission = 0; transmission < 3; transmission += 1) {
+      this.#sendCommand(1350, rawPayload(encryptLevel2(Buffer.from(JSON.stringify(value)), this.#level2Key!, this.#level2Seq++), 0, 8, [8, 0], 0));
+      await delay(200);
+    }
+  }
+
   /** Diagnostic: send one fixed lens/zoom candidate from LENS_TRIALS. */
   async lensTrial(variant: string): Promise<void> {
+    const zoomLevel = /^zoom-(\d+(?:\.5)?)$/.exec(variant);
+    if (zoomLevel) return await this.zoom(Number(zoomLevel[1]));
     const trial = LENS_TRIALS[variant];
     if (!trial) throw new Error("Unknown lens trial");
     await this.#sendControlPayload(trial[0], trial[1]);
