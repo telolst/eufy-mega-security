@@ -1404,8 +1404,8 @@ export class GatewayServer {
     const rawZoom = body.zoom;
     let zoom: number | undefined;
     if (rawZoom !== undefined) {
-      if (typeof rawZoom !== \"number\" || !Number.isFinite(rawZoom) || rawZoom < 1 || rawZoom > 12 || !Number.isInteger(rawZoom * 2)) {
-        return json(response, 400, { error: \"Pan/tilt zoom must be between 1 and 12 in steps of 0.5\" });
+      if (typeof rawZoom !== "number" || !Number.isFinite(rawZoom) || rawZoom < 1 || rawZoom > 12 || !Number.isInteger(rawZoom * 2)) {
+        return json(response, 400, { error: "Pan/tilt zoom must be between 1 and 12 in steps of 0.5" });
       }
       zoom = rawZoom;
     }
