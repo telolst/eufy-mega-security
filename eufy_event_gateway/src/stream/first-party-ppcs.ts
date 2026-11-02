@@ -2497,7 +2497,7 @@ export class FirstPartyPpcsSession {
    */
   async panTilt(direction: "left" | "right" | "up" | "down", zoom?: number): Promise<void> {
     if (zoom !== undefined && (!Number.isFinite(zoom) || zoom < 1 || zoom > 12 || !Number.isInteger(zoom * 2))) {
-      throw new Error(\"Unsupported pan/tilt zoom hint\");
+      throw new Error("Unsupported pan/tilt zoom hint");
     }
     const rotateType = { left: 1, right: 2, up: 3, down: 4 }[direction];
     await this.#sendControlPayload(6030, {
