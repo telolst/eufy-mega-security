@@ -13,12 +13,16 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass
+from pathlib import Path
 
+from homeassistant.components.frontend import add_extra_js_url
+from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.loader import async_get_integration
 
 from .client import GatewayClient, GatewayClientError
 from .const import CONF_API_TOKEN, DOMAIN, PLATFORMS
@@ -26,6 +30,31 @@ from .coordinator import EufyGatewayCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 _CAPABILITY_REFRESH_TIMEOUT_SECONDS = 45
+
+
+_CAMERA_CARD_URL = f"/{DOMAIN}/frontend"
+_CAMERA_CARD_REGISTERED = f"{DOMAIN}_camera_card_registered"
+
+
+async def _async_register_camera_card(hass: HomeAssistant) -> None:
+    """Serve the bundled camera card and load it on every dashboard.
+
+    Runs once per Home Assistant start, whatever the number of entries. The
+    card derives its element name from this URL, so side-by-side builds with a
+    different domain register distinct cards. A failure here only costs the
+    card, never the gateway entry.
+    """
+    if hass.data.get(_CAMERA_CARD_REGISTERED):
+        return
+    hass.data[_CAMERA_CARD_REGISTERED] = True
+    try:
+        await hass.http.async_register_static_paths(
+            [StaticPathConfig(_CAMERA_CARD_URL, str(Path(__file__).parent / "frontend"), False)]
+        )
+        integration = await async_get_integration(hass, DOMAIN)
+        add_extra_js_url(hass, f"{_CAMERA_CARD_URL}/camera-card.js?v={integration.version}")
+    except Exception:  # noqa: BLE001 - the card is optional
+        _LOGGER.warning("Could not register the Eufy Mega camera card", exc_info=True)
 
 
 @dataclass
@@ -50,6 +79,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: EufyGatewayConfigEntry) 
     entity factories can make capability decisions from a complete inventory.
     The long-lived event listener starts only after those platforms subscribe.
     """
+    await _async_register_camera_card(hass)
     client = GatewayClient(
         async_get_clientsession(hass),
         entry.data["url"],
