@@ -1036,24 +1036,6 @@ export class GatewayServer {
       }
       if (
         request.method === "POST" &&
-        segments[0] === "api" && segments[1] === "cameras" && segments[3] === "lens-trial" && segments.length === 4
-      ) {
-        return await this.#cameraLensTrial(request, segments[2]!, response);
-      }
-      if (
-        request.method === "GET" &&
-        segments[0] === "api" && segments[1] === "cameras" && segments[3] === "params" && segments.length === 4
-      ) {
-        return await this.#cameraParams(segments[2]!, response);
-      }
-      if (
-        request.method === "GET" &&
-        segments[0] === "api" && segments[1] === "cameras" && segments[3] === "cloud-params" && segments.length === 4
-      ) {
-        return await this.#cameraCloudParams(segments[2]!, response);
-      }
-      if (
-        request.method === "POST" &&
         segments[0] === "api" && segments[1] === "cameras" && segments[3] === "ai-tracking" && segments.length === 4
       ) {
         return await this.#cameraAiTracking(request, segments[2]!, response);
@@ -1402,57 +1384,6 @@ export class GatewayServer {
     } else {
       await move();
     }
-    return json(response, 200, { ok: true });
-  }
-
-  /** Diagnostic: list cloud inventory parameters; text leaves are reduced to their length. */
-  async #cameraCloudParams(serial: string, response: ServerResponse): Promise<void> {
-    if (!this.state.hasCamera(serial)) return json(response, 404, { error: "Camera not found" });
-    if (!this.provider.readCloudParams) return json(response, 501, { error: "Cloud parameter reads are unavailable" });
-    const redact = (value: unknown): unknown => {
-      if (typeof value === "number" || typeof value === "boolean" || value === null) return value;
-      if (typeof value === "string") {
-        if (/^-?\d+(\.\d+)?$/.test(value)) return Number(value);
-        if (/^[[{]/.test(value)) {
-          try { return redact(JSON.parse(value)); } catch { /* not JSON */ }
-        }
-        return `<text:${value.length}>`;
-      }
-      if (Array.isArray(value)) return value.map(redact);
-      if (typeof value === "object") {
-        return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, item]) => [key, redact(item)]));
-      }
-      return "<other>";
-    };
-    const params = await this.provider.readCloudParams(serial);
-    return json(response, 200, {
-      params: params.map(({ param_type, param_value }) => ({ param_type, param_value: redact(param_value) })),
-    });
-  }
-
-  /** Diagnostic: list camera-info parameters; strings are reduced to their length. */
-  async #cameraParams(serial: string, response: ServerResponse): Promise<void> {
-    if (!this.state.hasCamera(serial)) return json(response, 404, { error: "Camera not found" });
-    if (!this.provider.readCameraParams) return json(response, 501, { error: "Parameter reads are unavailable" });
-    const params = await this.provider.readCameraParams(serial);
-    return json(response, 200, {
-      params: params.map(({ param_type, param_value }) => ({
-        param_type,
-        param_value: typeof param_value === "string" ? `<text:${param_value.length}>` : param_value,
-      })),
-    });
-  }
-
-  /** Diagnostic: send one fixed lens/zoom candidate; never an arbitrary command. */
-  async #cameraLensTrial(request: IncomingMessage, serial: string, response: ServerResponse): Promise<void> {
-    if (!this.state.hasCamera(serial)) return json(response, 404, { error: "Camera not found" });
-    const body = await readJson(request);
-    const variant = body.variant;
-    if (typeof variant !== "string" || !["zoom-1", "zoom-3", "view-0", "view-1", "dual-0", "dual-12"].includes(variant)) {
-      throw new SyntaxError("Unknown lens trial variant");
-    }
-    if (!this.provider.lensTrialCamera) return json(response, 501, { error: "Lens trials are unavailable" });
-    await this.provider.lensTrialCamera(serial, variant);
     return json(response, 200, { ok: true });
   }
 

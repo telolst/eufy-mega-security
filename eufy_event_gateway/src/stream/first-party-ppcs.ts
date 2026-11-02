@@ -2468,39 +2468,6 @@ export class FirstPartyPpcsSession {
   }
 
   /**
-   * Set the T8170 digital zoom factor on the running stream. The camera expects
-   * command 6203 inside a level-two protected 1350 transfer envelope; the 1700
-   * control envelope is acknowledged but ignored. Each new live view starts at 1x.
-   */
-  async zoom(level: number): Promise<void> {
-    if (this.#alarmRead) throw new Error("Alarm state read owns this session");
-    if (this.#options.purpose !== "control" && !this.#allowsViewerPanControl(6203)) throw new Error("Camera zoom requires a control session");
-    if (!this.#remote) throw new Error("Camera zoom session is not connected");
-    if (this.#options.cameraModel !== "T8170" || this.#options.homeBaseAttached || this.#options.channel !== 0) {
-      throw new Error("Camera zoom requires the standalone T8170 channel-zero route");
-    }
-    if (!this.#options.accountId) throw new Error("Camera zoom requires an owning account");
-    if (!Number.isFinite(level) || level < 1 || level > 12 || !Number.isInteger(level * 2)) throw new Error("Unsupported zoom level");
-    await this.#waitForLevel2Key();
-    const value = { account_id: this.#options.accountId, cmd: 6203, mChannel: 0, mValue3: 0,
-      payload: { x: 0, y: 0, w: 0, h: 0, offset: false, orgZoom: 0, dstZoom: level }, transaction: `${Date.now()}` };
-    // Absolute writes tolerate retransmission, as with the other native 1350 preferences.
-    for (let transmission = 0; transmission < 3; transmission += 1) {
-      this.#sendCommand(1350, rawPayload(encryptLevel2(Buffer.from(JSON.stringify(value)), this.#level2Key!, this.#level2Seq++), 0, 8, [8, 0], 0));
-      await delay(200);
-    }
-  }
-
-  /** Diagnostic: send one fixed lens/zoom candidate from LENS_TRIALS. */
-  async lensTrial(variant: string): Promise<void> {
-    const zoomLevel = /^zoom-(\d+(?:\.5)?)$/.exec(variant);
-    if (zoomLevel) return await this.zoom(Number(zoomLevel[1]));
-    const trial = LENS_TRIALS[variant];
-    if (!trial) throw new Error("Unknown lens trial");
-    await this.#sendControlPayload(trial[0], trial[1]);
-  }
-
-  /**
    * Nudge the camera one firmware-defined pan/tilt step. Command 6030 with
    * cmd_type 1 and rotate_type 1-4 (left, right, up, down) was verified on the T8170.
    */
@@ -3382,8 +3349,7 @@ export class FirstPartyPpcsSession {
   #allowsViewerPanControl(command?: number): boolean {
     // The T8170 accepts stored-preset moves and pan/tilt steps on its own direct live route (hardware verified).
     if (this.#options.cameraModel === "T8170" && !this.#options.homeBaseAttached
-      && this.#options.channel === 0 && (command === 6035 || command === 6030
-        || command === 6203 || command === 2730 || command === 6243)) return true;
+      && this.#options.channel === 0 && (command === 6035 || command === 6030)) return true;
     return supportsViewerPanControl(this.#options.cameraModel, Boolean(this.#options.homeBaseAttached), this.#options.channel, command);
   }
 
@@ -3871,19 +3837,6 @@ function booleanFlag(value: unknown): boolean {
  * C31 viewers admit saved-position queries, movement and schedule-backed cruise actions.
  * Tracking and unrelated writes require separate validation.
  */
-/**
- * Diagnostic lens/zoom candidates for the dual-lens T8170. The app switches
- * between 1x and 3x on the running stream; which command it uses is unknown.
- */
-const LENS_TRIALS: Readonly<Record<string, readonly [number, Record<string, number>]>> = {
-  "zoom-1": [6203, { dstZoom: 1 }],
-  "zoom-3": [6203, { dstZoom: 3 }],
-  "view-0": [2730, { mode: -1, quality: -1, primary_view: 0, sensor: 0 }],
-  "view-1": [2730, { mode: -1, quality: -1, primary_view: 1, sensor: 0 }],
-  "dual-0": [6243, { video_type: 0 }],
-  "dual-12": [6243, { video_type: 12 }],
-};
-
 export function supportsViewerPanControl(model: string | undefined, attached: boolean, channel: number, command?: number): boolean {
   return (model === "T8171" && channel === (attached ? 1 : 0))
     || (model === "T817L" && !attached && channel === 0 && (command === 6034 || command === 6035 || command === 6031));

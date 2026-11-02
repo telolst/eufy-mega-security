@@ -4836,37 +4836,6 @@ export class EufyProvider implements CameraProvider, CaptchaProvider {
     return this.#queuePanControl(serial, "pan_tilt", (session) => session.panTilt(direction));
   }
 
-  /** Diagnostic: send one fixed lens/zoom candidate to a T8170. */
-  lensTrialCamera(serial: string, variant: string): Promise<void> {
-    const device = this.#devices.get(serial);
-    if (!device || device.model !== "T8170") {
-      return Promise.reject(new Error("Lens trials are only available for the T8170"));
-    }
-    return this.#queuePanControl(serial, "lens_trial", (session) => session.lensTrial(variant));
-  }
-
-  /** Diagnostic: read the T8170 camera-info parameter list on a control session. */
-  async readCameraParams(serial: string): Promise<readonly { readonly param_type: number; readonly param_value: string | number | boolean }[]> {
-    const device = this.#devices.get(serial);
-    if (!device || device.model !== "T8170") throw new Error("Parameter reads are only available for the T8170");
-    let params: readonly { readonly param_type: number; readonly param_value: string | number | boolean }[] = [];
-    await this.#queuePanControl(serial, "camera_params", async (session) => {
-      params = await session.readCameraInfo();
-    });
-    return params;
-  }
-
-  /** Diagnostic: read one camera's parameter list from a fresh cloud inventory. */
-  async readCloudParams(serial: string): Promise<readonly { readonly param_type: number; readonly param_value: unknown }[]> {
-    const inventory = await this.#client.inventory();
-    const rows = inventory.devices.filter((row) => row.device_sn === serial);
-    if (rows.length !== 1) throw new Error("Camera not found in cloud inventory");
-    const params = rows[0]!.params;
-    if (!params) throw new Error("Cloud inventory row carries no parameters");
-    return params.flatMap((row) => typeof row.param_type === "number"
-      ? [{ param_type: row.param_type, param_value: row.param_value }] : []);
-  }
-
   /** Serialize pan actions on an existing decoded viewer or a newly owned control session. */
   #queuePanControl(
     serial: string,
