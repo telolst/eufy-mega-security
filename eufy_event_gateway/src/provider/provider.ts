@@ -208,7 +208,7 @@ export interface CameraProvider {
   selectCameraPresetPosition(serial: string, index: number): Promise<void>;
 
   /** Nudge a pan/tilt camera one firmware-defined step. */
-  panTiltCamera?(serial: string, direction: "left" | "right" | "up" | "down"): Promise<void>;
+  panTiltCamera?(serial: string, direction: "left" | "right" | "up" | "down", zoom?: number): Promise<void>;
 
   /** Set the digital zoom of a running camera live view. */
   zoomCamera?(serial: string, level: number): Promise<void>;

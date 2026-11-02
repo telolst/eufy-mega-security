@@ -2495,9 +2495,17 @@ export class FirstPartyPpcsSession {
    * Nudge the camera one firmware-defined pan/tilt step. Command 6030 with
    * cmd_type 1 and rotate_type 1-4 (left, right, up, down) was verified on the T8170.
    */
-  async panTilt(direction: "left" | "right" | "up" | "down"): Promise<void> {
+  async panTilt(direction: "left" | "right" | "up" | "down", zoom?: number): Promise<void> {
+    if (zoom !== undefined && (!Number.isFinite(zoom) || zoom < 1 || zoom > 12 || !Number.isInteger(zoom * 2))) {
+      throw new Error(\"Unsupported pan/tilt zoom hint\");
+    }
     const rotateType = { left: 1, right: 2, up: 3, down: 4 }[direction];
-    await this.#sendControlPayload(6030, { cmd_type: 1, rotate_type: rotateType });
+    await this.#sendControlPayload(6030, {
+      cmd_type: 1,
+      rotate_type: rotateType,
+      // The app sends the current image zoom so one firmware step scales down accordingly.
+      ...(zoom === undefined ? {} : { zoom, ivalue: -1 }),
+    });
   }
 
   /**

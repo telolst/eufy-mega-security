@@ -4830,12 +4830,12 @@ export class EufyProvider implements CameraProvider, CaptchaProvider {
   }
 
   /** Nudge a T8170 one pan/tilt step through the shared pan-control queue. */
-  panTiltCamera(serial: string, direction: "left" | "right" | "up" | "down"): Promise<void> {
+  panTiltCamera(serial: string, direction: "left" | "right" | "up" | "down", zoom?: number): Promise<void> {
     const device = this.#devices.get(serial);
     if (!device || device.model !== "T8170") {
       return Promise.reject(new Error("Pan/tilt is not supported for this camera"));
     }
-    return this.#queuePanControl(serial, "pan_tilt", (session) => session.panTilt(direction));
+    return this.#queuePanControl(serial, "pan_tilt", (session) => session.panTilt(direction, zoom));
   }
 
   /** Set the T8170 digital zoom through the shared pan-control queue. */
