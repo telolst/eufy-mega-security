@@ -18,6 +18,7 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers import entity_registry as er
 
 from . import EufyGatewayConfigEntry
 from .client import GatewayClientError
@@ -413,15 +414,22 @@ class EufyCameraPanTiltButton(EufyGatewayEntity, ButtonEntity):
         """Disable the action when fresh inventory withdraws pan/tilt support."""
         return super().available and self.camera.get("panTiltControlSupported") is True
 
+    def _pan_step(self) -> str:
+        """Return the step chosen in this camera's Pan step select, or normal."""
+        entity_id = er.async_get(self.hass).async_get_entity_id("select", DOMAIN, f"{self.serial}_camera_pan_step")
+        state = self.hass.states.get(entity_id) if entity_id else None
+        return state.state if state is not None and state.state in PAN_STEP_VALUES else "normal"
+
     async def async_press(self) -> None:
         """Send one movement step and never retry an ambiguous acknowledgement."""
         try:
-            await self.coordinator.client.pan_tilt_camera(self.serial, self._direction)
+            await self.coordinator.client.pan_tilt_camera(self.serial, self._direction, self._pan_step())
         except GatewayClientError as error:
             raise HomeAssistantError(f"Could not move camera: {error}") from error
 
 
 CAMERA_ZOOM_LEVELS = (1, 3)
+PAN_STEP_VALUES = ("very_fine", "fine", "normal", "coarse", "very_coarse")
 
 
 class EufyCameraZoomButton(EufyGatewayEntity, ButtonEntity):

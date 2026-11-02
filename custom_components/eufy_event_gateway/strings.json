@@ -169,6 +169,16 @@
       }
     },
     "select": {
+      "camera_pan_step": {
+        "name": "Pan step",
+        "state": {
+            "very_fine": "Very fine",
+            "fine": "Fine",
+            "normal": "Normal",
+            "coarse": "Coarse",
+            "very_coarse": "Very coarse"
+        }
+      },
       "lock_auto_lock_delay": {
         "name": "Auto-lock delay",
         "state": {

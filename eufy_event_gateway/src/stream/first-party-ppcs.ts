@@ -2484,10 +2484,30 @@ export class FirstPartyPpcsSession {
     await this.#waitForLevel2Key();
     const value = { account_id: this.#options.accountId, cmd: 6203, mChannel: 0, mValue3: 0,
       payload: { x: 0, y: 0, w: 0, h: 0, offset: false, orgZoom: 0, dstZoom: level }, transaction: `${Date.now()}` };
+    this.#zoomLevel = level;
     // Absolute writes tolerate retransmission, as with the other native 1350 preferences.
     for (let transmission = 0; transmission < 3; transmission += 1) {
       this.#sendCommand(1350, rawPayload(encryptLevel2(Buffer.from(JSON.stringify(value)), this.#level2Key!, this.#level2Seq++), 0, 8, [8, 0], 0));
       await delay(200);
+    }
+  }
+
+  /** Zoom last sent on this session; every new stream starts at 1x again. */
+  #zoomLevel = 1;
+
+  /**
+   * Move one user-selected pan/tilt step. The firmware divides one step by the
+   * zoom hint, so finer steps send a larger hint and coarser steps repeat the base
+   * step. The zoom set on this session scales the hint so the image moves a
+   * similar distance at 1x and 3x. The motor stops getting finer around hint 4.
+   */
+  async panTiltStep(direction: "left" | "right" | "up" | "down", step: "very_fine" | "fine" | "normal" | "coarse" | "very_coarse"): Promise<void> {
+    const divisor = step === "very_fine" ? 4 : step === "fine" ? 2 : 1;
+    const repeats = step === "very_coarse" ? 3 : step === "coarse" ? 2 : 1;
+    const hint = Math.min(12, Math.round(divisor * this.#zoomLevel * 2) / 2);
+    for (let index = 0; index < repeats; index += 1) {
+      if (index > 0) await delay(500);
+      await this.panTilt(direction, hint > 1 ? hint : undefined);
     }
   }
 

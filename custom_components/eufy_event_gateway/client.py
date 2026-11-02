@@ -614,12 +614,12 @@ class GatewayClient:
             and isinstance(position.get("isDefault"), bool)
         ]
 
-    async def pan_tilt_camera(self, serial: str, direction: str) -> None:
+    async def pan_tilt_camera(self, serial: str, direction: str, step: str | None = None) -> None:
         """Nudge a pan/tilt camera one firmware-defined step."""
         await self._json(
             f"/api/cameras/{serial}/pan-tilt",
             method="POST",
-            payload={"direction": direction},
+            payload={"direction": direction, **({"step": step} if step else {})},
         )
 
     async def zoom_camera(self, serial: str, level: float) -> None:

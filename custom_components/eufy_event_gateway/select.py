@@ -14,6 +14,9 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.const import EntityCategory
+from homeassistant.core import callback
+from homeassistant.helpers.restore_state import RestoreEntity
 
 from . import EufyGatewayConfigEntry
 from .client import GatewayClientError
@@ -37,7 +40,7 @@ NIGHT_VISION_MODE_KEYS = {
 }
 
 
-async def async_setup_entry(
+async def _async_setup_camera_selects(
     hass: HomeAssistant,
     entry: EufyGatewayConfigEntry,
     async_add_entities: AddEntitiesCallback,
@@ -512,3 +515,68 @@ class EufyNvrViewSelect(EufyGatewayEntity, SelectEntity):
             self.coordinator.async_set_camera(camera)
         except GatewayClientError as error:
             raise HomeAssistantError(str(error)) from error
+
+
+PAN_STEP_OPTIONS = ["very_fine", "fine", "normal", "coarse", "very_coarse"]
+
+
+class EufyCameraPanStepSelect(EufyGatewayEntity, SelectEntity, RestoreEntity):
+    """Remember the step size the pan/tilt buttons send for one camera.
+
+    Unlike the other selects this is a local Home Assistant preference: the
+    camera stores nothing, and the gateway receives the step with every move.
+    """
+
+    _attr_translation_key = "camera_pan_step"
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_icon = "mdi:arrow-expand-horizontal"
+    _attr_options: ClassVar[list[str]] = PAN_STEP_OPTIONS
+
+    def __init__(self, coordinator: EufyGatewayCoordinator, serial: str) -> None:
+        """Bind the step preference to a camera with pan/tilt support."""
+        EufyGatewayEntity.__init__(self, coordinator, serial)
+        SelectEntity.__init__(self)
+        self._attr_unique_id = f"{serial}_camera_pan_step"
+        self._attr_current_option = "normal"
+
+    async def async_added_to_hass(self) -> None:
+        """Restore the last chosen step across restarts."""
+        await super().async_added_to_hass()
+        last = await self.async_get_last_state()
+        if last is not None and last.state in PAN_STEP_OPTIONS:
+            self._attr_current_option = last.state
+
+    @property
+    def available(self) -> bool:
+        """Follow the camera's pan/tilt capability."""
+        return super().available and self.camera.get("panTiltControlSupported") is True
+
+    async def async_select_option(self, option: str) -> None:
+        """Store the new step; the next pan/tilt press uses it."""
+        self._attr_current_option = option
+        self.async_write_ha_state()
+
+
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: EufyGatewayConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Create the camera selects, then the local pan/tilt step preferences."""
+    await _async_setup_camera_selects(hass, entry, async_add_entities)
+    coordinator = entry.runtime_data.coordinator
+    known: set[str] = set()
+
+    @callback
+    def _add_pan_step_selects() -> None:
+        new: list[EufyCameraPanStepSelect] = []
+        for serial, camera in coordinator.cameras.items():
+            if serial in known or camera.get("panTiltControlSupported") is not True:
+                continue
+            known.add(serial)
+            new.append(EufyCameraPanStepSelect(coordinator, serial))
+        if new:
+            async_add_entities(new)
+
+    _add_pan_step_selects()
+    entry.async_on_unload(coordinator.async_add_listener(_add_pan_step_selects))
