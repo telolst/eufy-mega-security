@@ -1036,6 +1036,12 @@ export class GatewayServer {
       }
       if (
         request.method === "POST" &&
+        segments[0] === "api" && segments[1] === "cameras" && segments[3] === "zoom" && segments.length === 4
+      ) {
+        return await this.#cameraZoom(request, segments[2]!, response);
+      }
+      if (
+        request.method === "POST" &&
         segments[0] === "api" && segments[1] === "cameras" && segments[3] === "ai-tracking" && segments.length === 4
       ) {
         return await this.#cameraAiTracking(request, segments[2]!, response);
@@ -1397,6 +1403,19 @@ export class GatewayServer {
     }
     if (!this.provider.panTiltCamera) return json(response, 501, { error: "Pan/tilt is unavailable" });
     await this.provider.panTiltCamera(serial, direction);
+    return json(response, 200, { ok: true });
+  }
+
+  /** Set the T8170 digital zoom of the running live view without claiming state. */
+  async #cameraZoom(request: IncomingMessage, serial: string, response: ServerResponse): Promise<void> {
+    const body = await readJson(request);
+    const level = body.level;
+    if (typeof level !== "number" || !Number.isFinite(level) || level < 1 || level > 12 || !Number.isInteger(level * 2)) {
+      return json(response, 400, { error: "Zoom level must be between 1 and 12 in steps of 0.5" });
+    }
+    const provider = this.provider;
+    if (!provider.zoomCamera) return json(response, 501, { error: "Zoom is not available" });
+    await provider.zoomCamera(serial, level);
     return json(response, 200, { ok: true });
   }
 

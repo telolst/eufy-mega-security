@@ -234,6 +234,7 @@ export interface CameraState {
   readonly cameraSirenControlSupported: boolean;
   readonly presetPositionControlSupported: boolean;
   readonly panTiltControlSupported: boolean;
+  readonly zoomControlSupported: boolean;
   readonly aiTrackingControlSupported: boolean;
 
   /** Inventory-reported tracking preference, or null when the device supplies no verified value. */
@@ -553,6 +554,7 @@ export interface CameraIdentity {
   readonly cameraSirenControlSupported?: boolean;
   readonly presetPositionControlSupported?: boolean;
   readonly panTiltControlSupported?: boolean;
+  readonly zoomControlSupported?: boolean;
   readonly aiTrackingControlSupported?: boolean;
 
   /** Model-qualified tracking state; null means the camera has not reported a valid enable bit. */

@@ -101,6 +101,13 @@ async def async_setup_entry(
                         continue
                     known.add(pan_key)
                     entities.append(EufyCameraPanTiltButton(coordinator, serial, direction))
+            if camera.get("zoomControlSupported") is True:
+                for level in CAMERA_ZOOM_LEVELS:
+                    zoom_key = (serial, f"zoom_{level}")
+                    if zoom_key in known:
+                        continue
+                    known.add(zoom_key)
+                    entities.append(EufyCameraZoomButton(coordinator, serial, level))
             for capability, entity_type in (
                 ("aiTrackingControlSupported", EufyCameraAiTrackingButton),
                 ("autoCruiseControlSupported", EufyCameraAutoCruiseButton),
@@ -412,3 +419,36 @@ class EufyCameraPanTiltButton(EufyGatewayEntity, ButtonEntity):
             await self.coordinator.client.pan_tilt_camera(self.serial, self._direction)
         except GatewayClientError as error:
             raise HomeAssistantError(f"Could not move camera: {error}") from error
+
+
+CAMERA_ZOOM_LEVELS = (1, 3)
+
+
+class EufyCameraZoomButton(EufyGatewayEntity, ButtonEntity):
+    """Set the digital zoom of a running live view without claiming a zoom state."""
+
+    def __init__(
+        self,
+        coordinator: EufyGatewayCoordinator,
+        serial: str,
+        level: int,
+    ) -> None:
+        """Bind one zoom level to a capability-backed camera."""
+        EufyGatewayEntity.__init__(self, coordinator, serial)
+        ButtonEntity.__init__(self)
+        self._level = level
+        self._attr_unique_id = f"{serial}_camera_zoom_{level}"
+        self._attr_translation_key = f"camera_zoom_{level}"
+        self._attr_icon = "mdi:magnify-plus-outline" if level > 1 else "mdi:magnify-minus-outline"
+
+    @property
+    def available(self) -> bool:
+        """Disable the action when fresh inventory withdraws zoom support."""
+        return super().available and self.camera.get("zoomControlSupported") is True
+
+    async def async_press(self) -> None:
+        """Send one absolute zoom level; the camera resets to 1x for every new live view."""
+        try:
+            await self.coordinator.client.zoom_camera(self.serial, self._level)
+        except GatewayClientError as error:
+            raise HomeAssistantError(f"Could not zoom camera: {error}") from error

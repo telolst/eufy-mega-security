@@ -622,6 +622,14 @@ class GatewayClient:
             payload={"direction": direction},
         )
 
+    async def zoom_camera(self, serial: str, level: float) -> None:
+        """Set the digital zoom of a running camera live view."""
+        await self._json(
+            f"/api/cameras/{serial}/zoom",
+            method="POST",
+            payload={"level": level},
+        )
+
     async def select_camera_preset_position(self, serial: str, index: int) -> None:
         """Move once to a gateway-validated stored camera position."""
         await self._json(

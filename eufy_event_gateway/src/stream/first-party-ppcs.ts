@@ -2468,6 +2468,30 @@ export class FirstPartyPpcsSession {
   }
 
   /**
+   * Set the T8170 digital zoom factor (1-12 in steps of 0.5) on the running stream.
+   * The camera expects command 6203 inside a level-two protected 1350 transfer
+   * envelope; the 1700 control envelope is acknowledged but ignored. Every new
+   * live view starts at 1x again, so no zoom state is claimed.
+   */
+  async zoom(level: number): Promise<void> {
+    if (this.#alarmRead) throw new Error("Alarm state read owns this session");
+    if (!this.#remote) throw new Error("Camera zoom session is not connected");
+    if (this.#options.cameraModel !== "T8170" || this.#options.homeBaseAttached || this.#options.channel !== 0) {
+      throw new Error("Camera zoom requires the standalone T8170 channel-zero route");
+    }
+    if (!this.#options.accountId) throw new Error("Camera zoom requires an owning account");
+    if (!Number.isFinite(level) || level < 1 || level > 12 || !Number.isInteger(level * 2)) throw new Error("Unsupported zoom level");
+    await this.#waitForLevel2Key();
+    const value = { account_id: this.#options.accountId, cmd: 6203, mChannel: 0, mValue3: 0,
+      payload: { x: 0, y: 0, w: 0, h: 0, offset: false, orgZoom: 0, dstZoom: level }, transaction: `${Date.now()}` };
+    // Absolute writes tolerate retransmission, as with the other native 1350 preferences.
+    for (let transmission = 0; transmission < 3; transmission += 1) {
+      this.#sendCommand(1350, rawPayload(encryptLevel2(Buffer.from(JSON.stringify(value)), this.#level2Key!, this.#level2Seq++), 0, 8, [8, 0], 0));
+      await delay(200);
+    }
+  }
+
+  /**
    * Nudge the camera one firmware-defined pan/tilt step. Command 6030 with
    * cmd_type 1 and rotate_type 1-4 (left, right, up, down) was verified on the T8170.
    */

@@ -1702,6 +1702,7 @@ export class EufyProvider implements CameraProvider, CaptchaProvider {
       firmwareUpdateAvailable: null, rssi: null, audioSettings: null, reportedSettings: profile ? { streamingQualityTier: values.quality, imageFlipped: null, statusLedEnabled: null, soundDetectionEnabled: null } : null,
       enabled: null, motionDetectionEnabled: null, guardMode: null, nightVisionMode: values.night,
       panTiltControlSupported: false,
+      zoomControlSupported: false,
       nvrPanControlSupported: !!profile && (!profile.opticalZoom || view === 1),
       nvrOpticalZoomControlSupported: !!profile?.opticalZoom && view === 1,
       nvrViewOptions: profile?.views ?? [], nvrSelectedView: profile ? view : null,
@@ -4574,6 +4575,7 @@ export class EufyProvider implements CameraProvider, CaptchaProvider {
         && device.adminUserId !== null
         && isPpcsRouteReady(device, this.#devices, dskPeerSerials),
       panTiltControlSupported: soloCamPanControlsSupported && device.model === "T8170",
+      zoomControlSupported: soloCamPanControlsSupported && device.model === "T8170",
       presetPositionControlSupported: t817lControlsSupported || soloCamPanControlsSupported
         || supportsStandaloneC31Presets(device, route, isPpcsRouteReady(device, this.#devices, dskPeerSerials)),
       storedRecordingsSupported: supportsSoloCamStoredRecordings(device, route, isPpcsRouteReady(device, this.#devices, dskPeerSerials)),
@@ -4834,6 +4836,15 @@ export class EufyProvider implements CameraProvider, CaptchaProvider {
       return Promise.reject(new Error("Pan/tilt is not supported for this camera"));
     }
     return this.#queuePanControl(serial, "pan_tilt", (session) => session.panTilt(direction));
+  }
+
+  /** Set the T8170 digital zoom through the shared pan-control queue. */
+  zoomCamera(serial: string, level: number): Promise<void> {
+    const device = this.#devices.get(serial);
+    if (!device || device.model !== "T8170") {
+      return Promise.reject(new Error("Zoom is not supported for this camera"));
+    }
+    return this.#queuePanControl(serial, "zoom", (session) => session.zoom(level));
   }
 
   /** Serialize pan actions on an existing decoded viewer or a newly owned control session. */

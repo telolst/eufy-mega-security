@@ -76,6 +76,12 @@
       },
       "camera_pan_tilt_down": {
         "name": "Tilt down"
+      },
+      "camera_zoom_1": {
+        "name": "Zoom 1x"
+      },
+      "camera_zoom_3": {
+        "name": "Zoom 3x"
       }
     },
     "alarm_control_panel": {
