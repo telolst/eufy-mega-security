@@ -167,7 +167,16 @@ async function createLiveCard(entityId) {
   }
 }
 
-/** Full-screen live view attached to document.body so dashboard layouts cannot clip it. */
+/**
+ * Attach the overlay where Home Assistant keeps its own dialogs. Players inside
+ * <home-assistant> receive the frontend context; under document.body they never
+ * get a connection and request no stream.
+ */
+function overlayParent() {
+  return document.querySelector("home-assistant")?.shadowRoot || document.body;
+}
+
+/** Full-screen live view attached next to Home Assistant's dialogs so dashboard layouts cannot clip it. */
 class LiveOverlay {
   constructor(card) {
     this.card = card;
@@ -227,7 +236,9 @@ class LiveOverlay {
 
     this.root.addEventListener("click", (event) => this.onClick(event));
     this.root.querySelector(".stage").addEventListener("pointerdown", () => this.poke(), true);
-    document.body.append(this.host);
+    const parent = overlayParent();
+    parent.append(this.host);
+    console.info(`${TAG}: overlay attached to ${parent === document.body ? "document.body" : "home-assistant shadow root"}`);
     document.addEventListener("keydown", this.onKey);
     document.addEventListener("visibilitychange", this.onVisibility);
     document.addEventListener("fullscreenchange", this.onFullscreen);
@@ -350,7 +361,7 @@ class LiveOverlay {
     document.removeEventListener("keydown", this.onKey);
     document.removeEventListener("visibilitychange", this.onVisibility);
     document.removeEventListener("fullscreenchange", this.onFullscreen);
-    if (document.fullscreenElement === this.host) document.exitFullscreen().catch(() => {});
+    if (this.nativeFullscreen && document.fullscreenElement) document.exitFullscreen().catch(() => {});
     // Removing the player ends the stream.
     this.host.remove();
     if (this.card._overlay === this) this.card._overlay = null;
