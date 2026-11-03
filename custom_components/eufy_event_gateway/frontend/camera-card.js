@@ -246,31 +246,37 @@ class LiveOverlay {
     this.startStream(hass, state);
   }
 
-  async startStream(hass, rebuilt = false) {
-    const card = await createLiveCard(this.entityId);
+  async startStream(hass) {
+    // Let Home Assistant load its lazily defined camera player.
+    if (!customElements.get("ha-camera-stream")) await createLiveCard(this.entityId);
+    await Promise.race([
+      customElements.whenDefined("ha-camera-stream"),
+      new Promise((resolve) => setTimeout(resolve, 5000)),
+    ]);
     if (this.closed) return;
-    if (!card) {
+    if (!customElements.get("ha-camera-stream")) {
       this.root.querySelector(".hint").textContent = "Live player unavailable in this Home Assistant version.";
       return;
     }
-    // Built-in cards load lazily and ask their parent to rebuild once they are defined.
-    card.addEventListener("ll-rebuild", (event) => {
-      event.stopPropagation();
-      if (this.closed || rebuilt) return;
-      card.remove();
-      if (this.liveCard === card) this.liveCard = null;
-      this.startStream(this.card._hass, true);
-    }, { once: true });
-    await Promise.race([
-      customElements.whenDefined(card.localName),
-      new Promise((resolve) => setTimeout(resolve, 5000)),
-    ]);
-    if (this.closed || !card.isConnected && card.parentNode) return;
-    card.classList.add("live");
-    this.liveCard = card;
-    this.root.querySelector(".video").insertBefore(card, this.frame);
-    card.hass = this.card._hass || hass;
-    console.info(`${TAG}: live card <${card.localName}> defined=${Boolean(customElements.get(card.localName))} rebuilt=${rebuilt}`);
+    const stream = document.createElement("ha-camera-stream");
+    stream.classList.add("live");
+    this.root.querySelector(".video").insertBefore(stream, this.frame);
+    // Assign properties only once the element is upgraded: values set before an
+    // upgrade through Home Assistant's scoped element registry can be lost.
+    await new Promise((resolve) => requestAnimationFrame(() => resolve()));
+    if (this.closed) {
+      stream.remove();
+      return;
+    }
+    const current = this.card._hass || hass;
+    stream.muted = true;
+    stream.controls = false;
+    stream.allowExoPlayer = false;
+    stream.hass = current;
+    // Setting stateObj last starts the capability query with hass already present.
+    stream.stateObj = current.states[this.entityId];
+    this.liveCard = stream;
+    console.info(`${TAG}: live player upgraded=${stream.constructor !== HTMLElement} hass=${Boolean(stream.hass)}`);
   }
 
   onClick(event) {
