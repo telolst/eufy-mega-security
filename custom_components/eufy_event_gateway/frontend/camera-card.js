@@ -246,17 +246,31 @@ class LiveOverlay {
     this.startStream(hass, state);
   }
 
-  async startStream(hass) {
+  async startStream(hass, rebuilt = false) {
     const card = await createLiveCard(this.entityId);
     if (this.closed) return;
     if (!card) {
       this.root.querySelector(".hint").textContent = "Live player unavailable in this Home Assistant version.";
       return;
     }
+    // Built-in cards load lazily and ask their parent to rebuild once they are defined.
+    card.addEventListener("ll-rebuild", (event) => {
+      event.stopPropagation();
+      if (this.closed || rebuilt) return;
+      card.remove();
+      if (this.liveCard === card) this.liveCard = null;
+      this.startStream(this.card._hass, true);
+    }, { once: true });
+    await Promise.race([
+      customElements.whenDefined(card.localName),
+      new Promise((resolve) => setTimeout(resolve, 5000)),
+    ]);
+    if (this.closed || !card.isConnected && card.parentNode) return;
     card.classList.add("live");
-    card.hass = hass;
     this.liveCard = card;
     this.root.querySelector(".video").insertBefore(card, this.frame);
+    card.hass = this.card._hass || hass;
+    console.info(`${TAG}: live card <${card.localName}> defined=${Boolean(customElements.get(card.localName))} rebuilt=${rebuilt}`);
   }
 
   onClick(event) {
