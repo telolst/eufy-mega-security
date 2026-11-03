@@ -50,7 +50,9 @@ const OVERLAY_CSS = `
   @supports (height: 100dvh) { .video { width: min(100vw, calc(100dvh * 16 / 9)); } }
   .hint { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
     text-align: center; padding: 16px; color: rgba(255, 255, 255, 0.7); font-size: 15px; }
-  ha-camera-stream { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .live { position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+    --ha-card-border-radius: 0; --ha-card-border-width: 0; --ha-card-box-shadow: none;
+    --ha-card-background: transparent; --card-background-color: transparent; }
   .frame { position: absolute; left: 33.333%; top: 33.333%; width: 33.333%; height: 33.333%;
     border: 1.5px dashed rgba(255, 255, 255, 0.55); border-radius: 2px; pointer-events: none; }
   [hidden] { display: none !important; }
@@ -84,7 +86,7 @@ const OVERLAY_CSS = `
 const OVERLAY_HTML = `
   <div class="stage">
     <div class="video">
-      <div class="hint">Starting live view…</div>
+      <div class="hint">Connecting to camera… this can take up to 15 s</div>
       <div class="frame"></div>
     </div>
     <div class="ui">
@@ -138,20 +140,31 @@ function findRoles(hass, cameraEntityId) {
   return roles;
 }
 
-/** Home Assistant loads its camera player lazily; pull it in through a built-in card. */
-async function ensureStreamElement(entityId) {
-  if (customElements.get("ha-camera-stream")) return true;
+/**
+ * Play the live view through Home Assistant's own picture-entity card. Building
+ * ha-camera-stream directly is fragile: it queries stream capabilities before a
+ * card can hand it hass. The built-in card owns that lifecycle and ends the
+ * stream when it is removed.
+ */
+async function createLiveCard(entityId) {
   try {
     const helpers = await window.loadCardHelpers?.();
-    helpers?.createCardElement({ type: "picture-entity", entity: entityId, camera_view: "live" });
+    if (!helpers) return null;
+    return helpers.createCardElement({
+      type: "picture-entity",
+      entity: entityId,
+      camera_view: "live",
+      aspect_ratio: "16:9",
+      fit_mode: "contain",
+      show_name: false,
+      show_state: false,
+      tap_action: { action: "none" },
+      hold_action: { action: "none" },
+      double_tap_action: { action: "none" },
+    });
   } catch (_error) {
-    // Fall through to the bounded wait below.
+    return null;
   }
-  await Promise.race([
-    customElements.whenDefined("ha-camera-stream"),
-    new Promise((resolve) => setTimeout(resolve, 5000)),
-  ]);
-  return Boolean(customElements.get("ha-camera-stream"));
 }
 
 /** Full-screen live view attached to document.body so dashboard layouts cannot clip it. */
@@ -233,21 +246,17 @@ class LiveOverlay {
     this.startStream(hass, state);
   }
 
-  async startStream(hass, state) {
-    const available = await ensureStreamElement(this.entityId);
+  async startStream(hass) {
+    const card = await createLiveCard(this.entityId);
     if (this.closed) return;
-    if (!available) {
-      this.root.querySelector(".hint").textContent =
-        "Live player unavailable. Open the camera once from its entity dialog, then try again.";
+    if (!card) {
+      this.root.querySelector(".hint").textContent = "Live player unavailable in this Home Assistant version.";
       return;
     }
-    const stream = document.createElement("ha-camera-stream");
-    stream.hass = hass;
-    stream.stateObj = state;
-    stream.muted = true;
-    stream.controls = false;
-    stream.allowExoPlayer = false;
-    this.root.querySelector(".video").insertBefore(stream, this.frame);
+    card.classList.add("live");
+    card.hass = hass;
+    this.liveCard = card;
+    this.root.querySelector(".video").insertBefore(card, this.frame);
   }
 
   onClick(event) {
@@ -305,6 +314,7 @@ class LiveOverlay {
   }
 
   update(hass) {
+    if (!this.closed && this.liveCard) this.liveCard.hass = hass;
     if (this.closed || !this.roles.step) return;
     const state = hass.states[this.roles.step];
     const label = state ? (hass.formatEntityState ? hass.formatEntityState(state) : state.state) : "";
